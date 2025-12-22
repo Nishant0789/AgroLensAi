@@ -14,6 +14,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
   SidebarFooter,
+  SidebarRail,
 } from '@/components/ui/sidebar';
 import Logo from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
@@ -48,7 +49,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar variant="floating" collapsible="icon">
+        <SidebarRail />
         <SidebarHeader>
           <Logo />
         </SidebarHeader>
@@ -59,6 +61,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === `/` ? item.href === `/` : item.href !== `/` && pathname.startsWith(item.href)}
+                  tooltip={item.label}
                 >
                   <a href={item.href}>
                     <item.icon />
@@ -72,7 +75,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={signOut}>
+              <SidebarMenuButton onClick={signOut} tooltip="Logout">
                 <LogOut/>
                 <span>Logout</span>
               </SidebarMenuButton>
@@ -80,7 +83,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className='bg-background/0'>
+      <SidebarInset>
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-lg sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 sm:pt-4">
           <SidebarTrigger className="md:hidden" />
           <div className="flex-1" />
