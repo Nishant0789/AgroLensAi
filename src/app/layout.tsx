@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth';
-import { AppContent } from './app-content';
 import { Waves } from '@/components/waves';
 
 export const metadata: Metadata = {
@@ -35,8 +34,8 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-            <Waves />
-            <AppContent>{children}</AppContent>
+          <Waves />
+          {children}
         </AuthProvider>
         <Toaster />
       </body>
