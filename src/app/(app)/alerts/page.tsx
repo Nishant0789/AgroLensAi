@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { mockAlerts } from '@/lib/mock-data';
 import { Bell, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function AlertsPage() {
   const FADE_IN_LIST = {
