@@ -2,23 +2,25 @@
 
 import { useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AuthForm from '@/components/auth-form';
 import Logo from '@/components/logo';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { AuthProvider, useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 
 const authBgImage = PlaceHolderImages.find((img) => img.id === 'auth-background');
 
-function AuthPageContent() {
+export default function AuthPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/');
+      const returnUrl = searchParams.get('returnTo') || '/';
+      router.push(returnUrl);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, searchParams]);
 
   if (loading || user) {
      return (
@@ -47,14 +49,5 @@ function AuthPageContent() {
         <AuthForm />
       </div>
     </div>
-  );
-}
-
-
-export default function AuthPage() {
-  return (
-    <AuthProvider>
-      <AuthPageContent />
-    </AuthProvider>
   );
 }

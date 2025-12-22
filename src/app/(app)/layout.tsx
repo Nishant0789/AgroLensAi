@@ -19,7 +19,6 @@ import Logo from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
 import { Chatbot } from '@/components/chatbot';
 import { LayoutDashboard, Shrub, Bell, BookOpen, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
