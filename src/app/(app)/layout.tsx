@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import {
@@ -14,12 +14,12 @@ import {
   SidebarProvider,
   SidebarTrigger,
   SidebarFooter,
-  SidebarRail,
 } from '@/components/ui/sidebar';
 import Logo from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
 import { Chatbot } from '@/components/chatbot';
-import { LayoutDashboard, Shrub, Bell, BookOpen, LogOut } from 'lucide-react';
+import { LayoutDashboard, Shrub, Bell, BookOpen, LogOut, PanelLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -32,6 +32,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -48,56 +49,58 @@ function AppContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SidebarProvider>
-      <Sidebar variant="floating" collapsible="icon">
-        <SidebarRail />
-        <SidebarHeader>
-          <Logo />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === `/` ? item.href === `/` : item.href !== `/` && pathname.startsWith(item.href)}
-                  tooltip={item.label}
+    <div className={`relative min-h-screen w-full ${isCollapsed ? 'md:pl-16' : 'md:pl-64'} transition-all duration-300 ease-in-out`}>
+      <div className={`fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'}`}>
+        <Card className="glass-card h-full rounded-none md:rounded-r-2xl flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between p-4">
+            <div className={`${isCollapsed ? 'hidden' : 'block'}`}>
+              <Logo />
+            </div>
+            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsCollapsed(!isCollapsed)}>
+               <PanelLeft />
+            </Button>
+          </CardHeader>
+          <CardContent className="flex-1 p-2 overflow-y-auto">
+            <nav className="flex flex-col gap-2">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-primary/20 ${pathname.startsWith(item.href) ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
                 >
-                  <a href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={signOut} tooltip="Logout">
-                <LogOut/>
-                <span>Logout</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-lg sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 sm:pt-4">
-          <SidebarTrigger className="md:hidden" />
-          <div className="flex-1" />
-          <UserNav />
-        </header>
-        <main className="flex-1 p-4 md:p-6">
-          {children}
-        </main>
-        <Chatbot />
-      </SidebarInset>
-    </SidebarProvider>
+                  <item.icon className="h-5 w-5" />
+                  {!isCollapsed && <span className="truncate">{item.label}</span>}
+                </Link>
+              ))}
+            </nav>
+          </CardContent>
+          <CardFooter className="p-2 border-t border-border/20">
+             <Button variant="ghost" className="w-full justify-start gap-3" onClick={signOut}>
+                <LogOut className="h-5 w-5" />
+                 {!isCollapsed && <span>Logout</span>}
+             </Button>
+          </CardFooter>
+        </Card>
+      </div>
+
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-lg sm:px-6">
+        <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setIsCollapsed(!isCollapsed)}>
+          <PanelLeft className="h-5 w-5" />
+          <span className="sr-only">Toggle sidebar</span>
+        </Button>
+        <div className="flex-1" />
+        <UserNav />
+      </header>
+      <main className="flex-1 p-4 md:p-6">
+        {children}
+      </main>
+      <Chatbot />
+    </div>
   );
 }
 
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import Link from 'next/link';
 
 export default function AppLayout({
   children,
