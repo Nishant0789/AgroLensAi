@@ -76,10 +76,19 @@ export default function AppLayout({
                     </nav>
                 </CardContent>
                 <CardFooter className="p-2 border-t border-border/20">
-                    <Button variant="ghost" className={`w-full gap-3 ${isCollapsed ? 'justify-center' : 'justify-start'}`} onClick={signOut}>
-                        <LogOut className="h-5 w-5" />
-                        {!isCollapsed && <span>Logout</span>}
-                    </Button>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                          <Button variant="ghost" className={`w-full gap-3 ${isCollapsed ? 'justify-center' : 'justify-start'}`} onClick={signOut}>
+                              <LogOut className="h-5 w-5" />
+                              {!isCollapsed && <span>Logout</span>}
+                          </Button>
+                      </TooltipTrigger>
+                      {isCollapsed && (
+                        <TooltipContent side="right" className="flex items-center gap-4">
+                          Logout
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                 </CardFooter>
             </Card>
         </aside>
