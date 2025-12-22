@@ -1,6 +1,5 @@
 'use client';
 
-import { useAuth } from '@/lib/auth';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { mockScanHistory, mockWeather } from '@/lib/mock-data';
 import Image from 'next/image';
 import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 
 const weatherIconMap = {
   sun: Sun,
