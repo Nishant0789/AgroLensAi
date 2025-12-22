@@ -17,7 +17,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      const returnUrl = searchParams.get('returnTo') || '/';
+      const returnUrl = searchParams.get('returnTo') || '/dashboard';
       router.push(returnUrl);
     }
   }, [user, loading, router, searchParams]);

@@ -3,23 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarProvider,
-  SidebarTrigger,
-  SidebarFooter,
-} from '@/components/ui/sidebar';
+import { LayoutDashboard, Shrub, Bell, BookOpen, LogOut, PanelLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import Link from 'next/link';
 import Logo from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
 import { Chatbot } from '@/components/chatbot';
-import { LayoutDashboard, Shrub, Bell, BookOpen, LogOut, PanelLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Waves } from '@/components/waves';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -28,7 +19,11 @@ const navItems = [
   { href: '/alerts', label: 'Alerts', icon: Bell },
 ];
 
-function AppContent({ children }: { children: React.ReactNode }) {
+export default function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -42,16 +37,20 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background/0">
-        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <>
+        <Waves />
+        <div className="flex h-screen items-center justify-center bg-background/0">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className={`relative min-h-screen w-full ${isCollapsed ? 'md:pl-16' : 'md:pl-64'} transition-all duration-300 ease-in-out`}>
+      <div className={`relative min-h-screen w-full ${isCollapsed ? 'md:pl-16' : 'md:pl-64'} transition-all duration-300 ease-in-out`}>
+      <Waves />
       <div className={`fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'}`}>
-        <Card className="glass-card h-full rounded-none md:rounded-r-2xl flex flex-col">
+        <Card className="glass-card h-full rounded-none md:rounded-r-2xl flex flex-col !bg-card/5">
           <CardHeader className="flex flex-row items-center justify-between p-4">
             <div className={`${isCollapsed ? 'hidden' : 'block'}`}>
               <Logo />
@@ -83,7 +82,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         </Card>
       </div>
 
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-lg sm:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/5 px-4 backdrop-blur-lg sm:px-6">
         <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setIsCollapsed(!isCollapsed)}>
           <PanelLeft className="h-5 w-5" />
           <span className="sr-only">Toggle sidebar</span>
@@ -91,23 +90,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
         <div className="flex-1" />
         <UserNav />
       </header>
-      <main className="flex-1 p-4 md:p-6">
+      <main className="flex-1 p-4 md:p-6 relative z-10">
         {children}
       </main>
       <Chatbot />
     </div>
-  );
-}
-
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import Link from 'next/link';
-
-export default function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-      <AppContent>{children}</AppContent>
   );
 }

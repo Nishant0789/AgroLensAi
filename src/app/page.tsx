@@ -11,8 +11,6 @@ import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-background');
-
 const featureVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
@@ -66,10 +64,6 @@ export default function Home() {
 
       <main className="flex-1">
         <section className="relative flex items-center justify-center h-screen overflow-hidden">
-         
-              <div className="absolute inset-0 bg-black/50" />
-           
-
           <motion.div
             className="relative z-10 text-center text-white px-4"
             initial={{ opacity: 0, y: 20 }}
