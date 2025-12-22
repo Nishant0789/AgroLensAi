@@ -47,14 +47,14 @@ export default function Home() {
 
   if (loading || user) {
     return (
-     <div className="flex h-screen items-center justify-center bg-background">
+     <div className="flex h-screen items-center justify-center bg-background/0">
        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
      </div>
    );
  }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
+    <div className="flex flex-col min-h-screen text-foreground">
       <header className="absolute top-0 left-0 right-0 z-20 p-4">
         <div className="container mx-auto flex justify-between items-center">
           <Logo />
@@ -66,25 +66,9 @@ export default function Home() {
 
       <main className="flex-1">
         <section className="relative flex items-center justify-center h-screen overflow-hidden">
-          {heroImage && (
-            <motion.div
-              className="absolute inset-0"
-              initial={{ scale: 1.1 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 10, ease: 'easeInOut' }}
-            >
-              <Image
-                src={heroImage.imageUrl}
-                alt={heroImage.description}
-                fill
-                className="object-cover"
-                quality={100}
-                priority
-                data-ai-hint={heroImage.imageHint}
-              />
+         
               <div className="absolute inset-0 bg-black/50" />
-            </motion.div>
-          )}
+           
 
           <motion.div
             className="relative z-10 text-center text-white px-4"
@@ -144,7 +128,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="py-8 bg-background">
+      <footer className="py-8 bg-background/0">
         <div className="container mx-auto text-center text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} AgroLens AI. All rights reserved.</p>
         </div>

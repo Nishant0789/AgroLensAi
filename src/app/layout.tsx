@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 import { AuthProvider } from '@/lib/auth';
+import { Waves } from '@/components/waves';
 
 export const metadata: Metadata = {
   title: 'AgroLens AI',
@@ -22,9 +23,12 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <Waves />
+        <div className="relative z-10">
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </div>
         <Toaster />
       </body>
     </html>
