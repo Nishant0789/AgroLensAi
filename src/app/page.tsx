@@ -7,6 +7,9 @@ import { ArrowRight, Bot, Camera, LayoutDashboard, Map, Sparkles, StepForward } 
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/logo';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useAuth } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-background');
 
@@ -32,6 +35,24 @@ const features = [
 ];
 
 export default function Home() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
+
+  if (loading || user) {
+    return (
+     <div className="flex h-screen items-center justify-center bg-background">
+       <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+     </div>
+   );
+ }
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="absolute top-0 left-0 right-0 z-20 p-4">

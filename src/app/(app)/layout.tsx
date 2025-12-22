@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +21,7 @@ import { Chatbot } from '@/components/chatbot';
 import { LayoutDashboard, Shrub, Bell, BookOpen, LogOut } from 'lucide-react';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/crop-scanner', label: 'Crop Scanner', icon: Shrub },
   { href: '/guide', label: 'Growth Guide', icon: BookOpen },
   { href: '/alerts', label: 'Alerts', icon: Bell },
@@ -102,8 +102,6 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
       <AppContent>{children}</AppContent>
-    </AuthProvider>
   );
 }
