@@ -9,7 +9,7 @@ body {
   :root {
     --background: 60 56% 91%; /* #F5F5DC - Soft earth tone */
     --foreground: 220 15% 25%;
-    --card: 60 30% 96% / 0.4;
+    --card: 60 30% 96% / 0.1;
     --card-foreground: 220 15% 25%;
     --popover: 60 30% 96%;
     --popover-foreground: 220 15% 25%;
@@ -32,7 +32,7 @@ body {
     --chart-4: 30 50% 45%;
     --chart-5: 0 50% 45%;
     --radius: 0.5rem;
-    --sidebar-background: hsl(var(--card) / 0.4);
+    --sidebar-background: hsl(var(--card) / 0.1);
     --sidebar-foreground: hsl(var(--card-foreground));
     --sidebar-primary: hsl(var(--primary));
     --sidebar-primary-foreground: hsl(var(--primary-foreground));
@@ -44,7 +44,7 @@ body {
   .dark {
     --background: 220 20% 10%;
     --foreground: 60 30% 96%;
-    --card: 220 20% 15% / 0.4;
+    --card: 220 20% 15% / 0.1;
     --card-foreground: 60 30% 96%;
     --popover: 220 20% 10%;
     --popover-foreground: 60 30% 96%;
@@ -66,7 +66,7 @@ body {
     --chart-3: 60 70% 50%;
     --chart-4: 30 70% 50%;
     --chart-5: 0 70% 50%;
-    --sidebar-background: hsl(var(--card) / 0.4);
+    --sidebar-background: hsl(var(--card) / 0.1);
     --sidebar-foreground: hsl(var(--card-foreground));
     --sidebar-primary: hsl(var(--primary));
     --sidebar-primary-foreground: hsl(var(--primary-foreground));
