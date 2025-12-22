@@ -45,8 +45,8 @@ export default function AppLayout({
 
   return (
     <TooltipProvider>
-      <div className="relative min-h-screen w-full md:flex">
-        <aside className={`fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-in-out md:relative md:h-auto ${isCollapsed ? 'w-16' : 'w-64'}`}>
+      <div className="relative min-h-screen w-full md:grid md:grid-cols-[auto_1fr]">
+        <aside className={`relative z-40 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'}`}>
             <Card className="glass-card h-full rounded-none md:rounded-r-2xl flex flex-col !bg-card/5">
                 <CardHeader className="flex flex-row items-center justify-between p-4">
                     <div className={`${isCollapsed ? 'hidden' : 'block'}`}>
