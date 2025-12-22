@@ -10,7 +10,6 @@ import Link from 'next/link';
 import Logo from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
 import { Chatbot } from '@/components/chatbot';
-import { Waves } from '@/components/waves';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -37,18 +36,14 @@ export default function AppLayout({
 
   if (loading || !user) {
     return (
-      <>
-        <Waves />
-        <div className="flex h-screen items-center justify-center bg-background/0">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      </>
+      <div className="flex h-screen items-center justify-center bg-background/0">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
     );
   }
 
   return (
       <div className={`relative min-h-screen w-full ${isCollapsed ? 'md:pl-16' : 'md:pl-64'} transition-all duration-300 ease-in-out`}>
-      <Waves />
       <div className={`fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'}`}>
         <Card className="glass-card h-full rounded-none md:rounded-r-2xl flex flex-col !bg-card/5">
           <CardHeader className="flex flex-row items-center justify-between p-4">
