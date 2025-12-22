@@ -248,7 +248,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-card/60 backdrop-blur-lg border-white/20 rounded-xl shadow-lg group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            className="flex h-full w-full flex-col bg-sidebar backdrop-blur-lg border border-sidebar-border rounded-xl shadow-lg"
           >
             {children}
           </div>
@@ -492,7 +492,7 @@ const SidebarMenu = React.forwardRef<
   <ul
     ref={ref}
     data-sidebar="menu"
-    className={cn("flex w-full min-w-0 flex-col gap-1", className)}
+    className={cn("flex w-full min-w-0 flex-col gap-1 p-2", className)}
     {...props}
   />
 ))
