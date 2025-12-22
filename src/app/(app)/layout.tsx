@@ -10,6 +10,7 @@ import Link from 'next/link';
 import Logo from '@/components/logo';
 import { UserNav } from '@/components/user-nav';
 import { Chatbot } from '@/components/chatbot';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -43,6 +44,7 @@ export default function AppLayout({
   }
 
   return (
+    <TooltipProvider>
       <div className={`relative min-h-screen w-full ${isCollapsed ? 'md:pl-16' : 'md:pl-64'} transition-all duration-300 ease-in-out`}>
       <div className={`fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'}`}>
         <Card className="glass-card h-full rounded-none md:rounded-r-2xl flex flex-col !bg-card/5">
@@ -57,19 +59,27 @@ export default function AppLayout({
           <CardContent className="flex-1 p-2 overflow-y-auto">
             <nav className="flex flex-col gap-2">
               {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-primary/20 ${pathname.startsWith(item.href) ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
-                >
-                  <item.icon className="h-5 w-5" />
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </Link>
+                 <Tooltip key={item.href} delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={item.href}
+                        className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-primary/20 ${pathname.startsWith(item.href) ? 'bg-primary/20 text-primary' : 'text-muted-foreground'} ${isCollapsed ? 'justify-center' : ''}`}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        {!isCollapsed && <span className="truncate">{item.label}</span>}
+                      </Link>
+                    </TooltipTrigger>
+                    {isCollapsed && (
+                        <TooltipContent side="right" className="flex items-center gap-4">
+                          {item.label}
+                        </TooltipContent>
+                    )}
+                 </Tooltip>
               ))}
             </nav>
           </CardContent>
           <CardFooter className="p-2 border-t border-border/20">
-             <Button variant="ghost" className="w-full justify-start gap-3" onClick={signOut}>
+             <Button variant="ghost" className={`w-full gap-3 ${isCollapsed ? 'justify-center' : 'justify-start'}`} onClick={signOut}>
                 <LogOut className="h-5 w-5" />
                  {!isCollapsed && <span>Logout</span>}
              </Button>
@@ -90,5 +100,6 @@ export default function AppLayout({
       </main>
       <Chatbot />
     </div>
+    </TooltipProvider>
   );
 }
