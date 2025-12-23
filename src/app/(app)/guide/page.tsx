@@ -150,10 +150,11 @@ export default function GuidePage() {
   return (
     <div className="container mx-auto max-w-4xl space-y-8">
        <Card className="glass-card">
-          <CardContent className="p-6 text-center">
+          <CardContent className="p-6">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
+              className="text-center"
             >
               <h1 className="text-3xl font-bold font-headline">Newbie to Pro Guide</h1>
               <p className="text-muted-foreground mt-2">Your personalized path to a successful harvest.</p>
@@ -233,11 +234,12 @@ export default function GuidePage() {
           
           {currentStep === 2 && selectedRoadmap && selectedCrop && (
             <div>
-                 <>
-                    <div className="text-center mb-8">
+                 <Card className="glass-card mb-8">
+                    <CardContent className="p-6 text-center">
                         <h2 className="text-3xl font-bold font-headline">{selectedRoadmap.title}</h2>
                         <p className="text-muted-foreground">A step-by-step guide for growing <span className="font-semibold text-primary">{selectedCrop.name}</span> in <span className="font-semibold text-primary">{location?.name}</span>.</p>
-                    </div>
+                    </CardContent>
+                 </Card>
 
                     <div className="relative">
                         <div className="absolute left-4 top-4 h-full border-l-2 border-border border-dashed"></div>
@@ -252,7 +254,7 @@ export default function GuidePage() {
                             <div className="absolute left-0 top-3 flex items-center justify-center w-8 h-8 bg-primary rounded-full text-primary-foreground font-bold">
                             {index + 1}
                             </div>
-                            <Card className="ml-4 bg-card shadow-md border-border/50">
+                            <Card className="ml-4 glass-card shadow-md">
                             <CardHeader>
                                 <CardTitle>{item.title}</CardTitle>
                                 <CardDescription className="flex items-center gap-2 pt-1">
@@ -275,7 +277,6 @@ export default function GuidePage() {
                             {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2" /> Regenerate Suggestions</>}
                         </Button>
                     </div>
-                </>
             </div>
           )}
         </motion.div>
