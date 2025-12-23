@@ -19,71 +19,102 @@ type LocationContextType = {
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
+const GORAKHPUR_LOCATION: LocationData = {
+    lat: 26.7606,
+    lon: 83.3732,
+    city: "Gorakhpur",
+    country: "India",
+    name: "Gorakhpur, India",
+}
+
 export function LocationProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const setLocationData = (data: LocationData) => {
+    setLocation(data);
+    setLoading(false);
+    setError(null);
+  };
+
+  const handleError = (message: string) => {
+    setError(message);
+    setLoading(false);
+  }
 
   const fetchLocation = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser.');
-      setLoading(false);
+      handleError('Geolocation is not supported. Defaulting to Gorakhpur.');
+      setLocationData(GORAKHPUR_LOCATION);
       return;
     }
+    
+    const locationPromise = new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+             enableHighAccuracy: false,
+             maximumAge: 600000, // 10 minutes
+        });
+    });
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const geoResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
-          if (!geoResponse.ok) {
-            throw new Error('Failed to fetch location name.');
-          }
-          const geoData = await geoResponse.json();
-          
-          if (geoData.city && geoData.countryName) {
-            const locationName = `${geoData.city}, ${geoData.countryName}`;
-            setLocation({
-              lat: latitude,
-              lon: longitude,
-              city: geoData.city,
-              country: geoData.countryName,
-              name: locationName,
-            });
-          } else {
-             throw new Error('Could not determine city from coordinates. Please ensure location services are accurate.');
-          }
-        } catch (err: any) {
-          console.error("Reverse geocoding error:", err);
-          setError(err.message || 'Could not fetch location details. Please try again.');
-        } finally {
-          setLoading(false);
+    const timeoutPromise = new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), 10000); // 10 second timeout
+    });
+
+    try {
+        const winner = await Promise.race([locationPromise, timeoutPromise]);
+
+        if (winner) { // Geolocation was successful
+            const position = winner;
+            const { latitude, longitude } = position.coords;
+            try {
+              const geoResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+              if (!geoResponse.ok) {
+                throw new Error('Failed to fetch location name.');
+              }
+              const geoData = await geoResponse.json();
+              
+              if (geoData.city && geoData.countryName) {
+                const locationName = `${geoData.city}, ${geoData.countryName}`;
+                setLocationData({
+                  lat: latitude,
+                  lon: longitude,
+                  city: geoData.city,
+                  country: geoData.countryName,
+                  name: locationName,
+                });
+              } else {
+                 throw new Error('Could not determine city from coordinates. Please ensure location services are accurate.');
+              }
+            } catch (err: any) {
+              console.error("Reverse geocoding error:", err);
+              handleError(err.message || 'Could not fetch location details. Defaulting to Gorakhpur.');
+              setLocationData(GORAKHPUR_LOCATION);
+            }
+        } else { // Timeout
+             handleError('Location fetch timed out. Defaulting to Gorakhpur.');
+             setLocationData(GORAKHPUR_LOCATION);
         }
-      },
-      (err) => {
-        let errorMessage = 'An unknown error occurred while accessing your location.';
+
+    } catch(err: any) { // Geolocation permission or other error
+        let errorMessage = 'An unknown error occurred. Defaulting to Gorakhpur.';
         switch(err.code) {
             case err.PERMISSION_DENIED:
-                errorMessage = "Location access was denied. Please enable it in your browser settings to use location-based features.";
+                errorMessage = "Location access denied. Please enable it to use location features. Defaulting to Gorakhpur.";
                 break;
             case err.POSITION_UNAVAILABLE:
-                errorMessage = "Your location information is currently unavailable. Please check your device's location settings.";
+                errorMessage = "Location info unavailable. Defaulting to Gorakhpur.";
                 break;
-            case err.TIMEOUT:
-                errorMessage = "The request to get your location timed out. Please try again.";
+            case err.TIMEOUT: // This case is now handled by Promise.race, but kept for safety
+                errorMessage = "Location request timed out. Defaulting to Gorakhpur.";
                 break;
         }
-        setError(errorMessage);
-        setLoading(false);
-      },
-      {
-        enableHighAccuracy: false,
-        maximumAge: 600000, // 10 minutes
-      }
-    );
+        handleError(errorMessage);
+        setLocationData(GORAKHPUR_LOCATION);
+    }
   }, []);
 
   useEffect(() => {
