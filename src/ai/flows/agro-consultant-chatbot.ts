@@ -53,7 +53,7 @@ Chat History:
 User Query: {{{query}}}
 
 Response: `,
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-3-flash',
   config: {
     safetySettings: [
       {
