@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Lottie from 'lottie-react';
@@ -26,6 +26,17 @@ export default function CropScannerPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -42,9 +53,10 @@ export default function CropScannerPage() {
   };
 
   const handleScan = async () => {
-    if (!imagePreview || !user) return;
+    if (!imagePreview || !user || cooldown > 0) return;
     setStatus('analyzing');
     setError(null);
+    setCooldown(10); // Start 10-second cooldown
     
     try {
       const analysisResult = await analyzeCrop({
@@ -146,8 +158,9 @@ export default function CropScannerPage() {
 
             {imagePreview && (
               <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={handleScan} disabled={status === 'analyzing' || !user} className="w-full">
-                    {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> : 'Scan Crop'}
+                 <Button onClick={handleScan} disabled={status === 'analyzing' || !user || cooldown > 0} className="w-full">
+                    {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
+                     cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
                 <Button onClick={reset} variant="outline" className="w-full" disabled={status === 'analyzing'}>
                     <Upload className="mr-2" /> Upload New Image
