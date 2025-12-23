@@ -76,7 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firestore: firestore,
           ...userData,
         });
-        router.push('/dashboard');
       } else {
         setUser(null);
       }
@@ -91,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       await signInWithPopup(auth, provider);
+      router.push('/dashboard');
     } catch (error) {
       console.error("Error signing in with Google: ", error);
       setLoading(false);
@@ -128,7 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       await confirmationResult.confirm(otp);
-      // onAuthStateChanged will handle the user state update and redirect.
+      // onAuthStateChanged will handle the user state update.
+      router.push('/dashboard');
     } catch(error) {
       setLoading(false);
       console.error("Error verifying OTP", error);
