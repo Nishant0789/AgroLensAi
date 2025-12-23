@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { initializeFirebase, useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
-import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import { useAuth as useFirebaseAuth, useFirestore, useUser as useFirebaseUser } from '@/firebase';
+import { GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -13,6 +13,7 @@ export type User = {
   displayName: string | null;
   photoURL: string | null;
   firestore: any; // Note: In a real app, you might want a more specific type
+  currentCrop?: string;
 };
 
 type AuthContextType = {
@@ -26,37 +27,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const { user: firebaseUser, loading: firebaseLoading } = useFirebaseUser();
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const auth = useFirebaseAuth();
   const firestore = useFirestore();
 
   useEffect(() => {
-    if (!auth || !firestore) return;
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+    const handleUser = async (fbUser: FirebaseUser | null) => {
+      if (fbUser) {
+        const userDocRef = doc(firestore, 'users', fbUser.uid);
         const userDoc = await getDoc(userDocRef);
 
+        let userData = {};
         if (!userDoc.exists()) {
-          await setDoc(userDocRef, {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
+          const newUserPayload = {
+            uid: fbUser.uid,
+            email: fbUser.email,
+            displayName: fbUser.displayName,
+            photoURL: fbUser.photoURL,
             createdAt: serverTimestamp(),
             currentCrop: 'Wheat' // Default crop
-          }, { merge: true });
+          };
+          await setDoc(userDocRef, newUserPayload, { merge: true });
+          userData = newUserPayload;
+        } else {
+          userData = userDoc.data();
         }
         
-        const userData = userDoc.exists() ? userDoc.data() : {};
-
         setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
+          uid: fbUser.uid,
+          email: fbUser.email,
+          displayName: fbUser.displayName,
+          photoURL: fbUser.photoURL,
           firestore: firestore,
           ...userData,
         });
@@ -65,10 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       }
       setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [auth, firestore]);
+    };
+    
+    if (!firebaseLoading) {
+        handleUser(firebaseUser);
+    }
+  }, [firebaseUser, firebaseLoading, firestore]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();

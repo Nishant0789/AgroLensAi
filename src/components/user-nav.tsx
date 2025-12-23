@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/lib/auth.tsx"
 import { LogOut, User as UserIcon } from "lucide-react"
 
 export function UserNav() {

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth';
 import { LayoutDashboard, Shrub, Bell, BookOpen, LogOut, PanelLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -12,7 +11,8 @@ import { Chatbot } from '@/components/chatbot';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { LocationProvider } from '@/lib/location';
-import { FirebaseProvider, useCollection } from '@/firebase';
+import { useCollection, useUser, useFirestore } from '@/firebase';
+import { useAuth } from '@/lib/auth';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 
@@ -23,12 +23,14 @@ const navItems = [
   { href: '/alerts', label: 'Alerts', icon: Bell },
 ];
 
-function UnreadAlertsBadge({ userId, firestore }: { userId: string, firestore: any }) {
-  const notificationsQuery = query(
-    collection(firestore, `users/${userId}/notifications`),
+function UnreadAlertsBadge() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const notificationsQuery = user ? query(
+    collection(firestore, `users/${user.uid}/notifications`),
     where('read', '==', false),
     limit(10)
-  );
+  ) : null;
   const { data: unreadNotifications } = useCollection(notificationsQuery);
   
   if (!unreadNotifications || unreadNotifications.length === 0) {
@@ -48,10 +50,12 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, signOut, firebaseApp } = useAuth();
+  const { user, loading } = useUser();
+  const { signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const firestore = useFirestore();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,7 +63,7 @@ export default function AppLayout({
     }
   }, [user, loading, router]);
 
-  if (loading || !user || !firebaseApp) {
+  if (loading || !user) {
     return (
       <div className="flex h-screen items-center justify-center bg-background/0">
         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -68,8 +72,7 @@ export default function AppLayout({
   }
 
   return (
-    <FirebaseProvider firebaseApp={firebaseApp}>
-      <LocationProvider user={user}>
+      <LocationProvider user={{...user, firestore: firestore}}>
         <TooltipProvider>
           <div className="relative min-h-screen w-full md:grid md:grid-cols-[auto_1fr]">
             <aside className={`relative z-40 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'}`}>
@@ -90,7 +93,7 @@ export default function AppLayout({
                                     >
                                         <item.icon className="h-5 w-5" />
                                         {!isCollapsed && <span className="truncate">{item.label}</span>}
-                                        {item.href === '/alerts' && user && <UnreadAlertsBadge userId={user.uid} firestore={user.firestore} />}
+                                        {item.href === '/alerts' && user && <UnreadAlertsBadge />}
                                     </Link>
                                     </TooltipTrigger>
                                     {isCollapsed && (
@@ -142,6 +145,5 @@ export default function AppLayout({
           </div>
         </TooltipProvider>
       </LocationProvider>
-    </FirebaseProvider>
   );
 }

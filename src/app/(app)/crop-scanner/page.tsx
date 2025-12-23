@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import analyzingAnimation from '../../../../public/lottie/analyzing.json';
 import { alertNearbyDiseases } from '@/ai/flows/geo-location-alerts';
 import { analyzeCrop } from '@/ai/ai-crop-scanner';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth.tsx';
 
 type ScanResult = {
   disease: string;

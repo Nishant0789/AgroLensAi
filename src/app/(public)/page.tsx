@@ -7,7 +7,7 @@ import { ArrowRight, Bot, Camera, LayoutDashboard, Map, Sparkles, StepForward } 
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/logo';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth.tsx';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 

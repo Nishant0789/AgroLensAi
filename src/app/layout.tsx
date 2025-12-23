@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
-import { AuthProvider } from '@/lib/auth';
+import { AuthProvider } from '@/lib/auth.tsx';
 import { Waves } from '@/components/waves';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'AgroLens AI',
@@ -33,10 +34,12 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-          <Waves />
-          {children}
-        </AuthProvider>
+        <FirebaseClientProvider>
+          <AuthProvider>
+            <Waves />
+            {children}
+          </AuthProvider>
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>

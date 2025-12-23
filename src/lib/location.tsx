@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { getCoordinatesForCity } from '@/ai/flows/get-weather-forecast';
-import { type User, useAuth } from './auth';
+import { type User, useAuth } from './auth.tsx';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 
