@@ -11,13 +11,13 @@ import { Chatbot } from '@/components/chatbot';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { LocationProvider } from '@/lib/location';
-import { useCollection, useUser, useFirestore, useAuth } from '@/firebase';
+import { useCollection, useFirestore } from '@/firebase';
+import { useAuth } from '@/lib/auth.tsx';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
-import { initializeFirebase } from '@/firebase';
 
 function UnreadAlertsBadge() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const firestore = useFirestore();
   const notificationsQuery = user ? query(
     collection(firestore, `users/${user.uid}/notifications`),

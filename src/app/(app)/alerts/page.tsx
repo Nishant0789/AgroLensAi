@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Bell, MapPin, Loader2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth.tsx';
-import { useCollection } from '@/firebase';
+import { useCollection, useFirestore } from '@/firebase';
 import { collection, orderBy, query } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
@@ -22,7 +22,8 @@ type Notification = {
 
 export default function AlertsPage() {
   const { user } = useAuth();
-  const notificationsQuery = user ? query(collection(user.firestore, `users/${user.uid}/notifications`), orderBy('timestamp', 'desc')) : null;
+  const firestore = useFirestore();
+  const notificationsQuery = user ? query(collection(firestore, `users/${user.uid}/notifications`), orderBy('timestamp', 'desc')) : null;
   const { data: notifications, loading } = useCollection<Notification>(notificationsQuery);
 
   const FADE_IN_LIST = {
