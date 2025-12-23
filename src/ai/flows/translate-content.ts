@@ -8,6 +8,12 @@
 
 import { ai } from '@/ai/genkit';
 import { TranslateContentInputSchema, TranslateContentOutputSchema, type TranslateContentInput, type TranslateContentOutput } from './translate-content-types';
+import Handlebars from 'handlebars';
+
+// Register the Handlebars helper before defining the prompt that uses it.
+Handlebars.registerHelper('JSONstringify', function(context) {
+    return JSON.stringify(context, null, 2);
+});
 
 export async function translateContent(input: TranslateContentInput): Promise<TranslateContentOutput> {
   return translateContentFlow(input);
@@ -35,12 +41,6 @@ const translateContentFlow = ai.defineFlow(
     outputSchema: TranslateContentOutputSchema,
   },
   async (input) => {
-
-    const handlebars = await import('handlebars');
-    handlebars.registerHelper('JSONstringify', function(context) {
-        return JSON.stringify(context, null, 2);
-    });
-      
     const { output } = await prompt(input);
     return output!;
   }
