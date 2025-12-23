@@ -10,6 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { format, addDays } from 'date-fns';
 
 const GetWeatherForecastInputSchema = z.object({
   latitude: z.number().describe('The latitude of the location.'),
@@ -30,23 +31,96 @@ const GetWeatherForecastOutputSchema = z.object({
 });
 export type GetWeatherForecastOutput = z.infer<typeof GetWeatherForecastOutputSchema>;
 
-// Mock tool to simulate fetching weather data. In a real app, this would call a weather API.
+
+const wmoCodeToIconAndDescription: { [key: number]: { icon: string, description: string } } = {
+  0: { icon: 'Sunny', description: 'Clear sky' },
+  1: { icon: 'Partly-Cloudy', description: 'Mainly clear' },
+  2: { icon: 'Partly-Cloudy', description: 'Partly cloudy' },
+  3: { icon: 'Cloudy', description: 'Overcast' },
+  45: { icon: 'Cloudy', description: 'Fog' },
+  48: { icon: 'Cloudy', description: 'Depositing rime fog' },
+  51: { icon: 'Rain', description: 'Light drizzle' },
+  52: { icon: 'Rain', description: 'Moderate drizzle' },
+  55: { icon: 'Rain', description: 'Dense drizzle' },
+  56: { icon: 'Rain', description: 'Light freezing drizzle' },
+  57: { icon: 'Rain', description: 'Dense freezing drizzle' },
+  61: { icon: 'Rain', description: 'Slight rain' },
+  63: { icon: 'Rain', description: 'Moderate rain' },
+  65: { icon: 'Rain', description: 'Heavy rain' },
+  66: { icon: 'Rain', description: 'Light freezing rain' },
+  67: { icon: 'Rain', description: 'Heavy freezing rain' },
+  71: { icon: 'Snow', description: 'Slight snow fall' },
+  73: { icon: 'Snow', description: 'Moderate snow fall' },
+  75: { icon: 'Snow', description: 'Heavy snow fall' },
+  77: { icon: 'Snow', description: 'Snow grains' },
+  80: { icon: 'Rain', description: 'Slight rain showers' },
+  81: { icon: 'Rain', description: 'Moderate rain showers' },
+  82: { icon: 'Rain', description: 'Violent rain showers' },
+  85: { icon: 'Snow', description: 'Slight snow showers' },
+  86: { icon: 'Snow', description: 'Heavy snow showers' },
+  95: { icon: 'Rain', description: 'Thunderstorm' },
+  96: { icon: 'Rain', description: 'Thunderstorm with slight hail' },
+  99: { icon: 'Rain', description: 'Thunderstorm with heavy hail' },
+};
+
+
+// Tool to fetch real weather data from Open-Meteo API.
 const getWeatherTool = ai.defineTool(
   {
     name: 'getWeatherTool',
-    description: 'Returns a 7-day weather forecast for the given coordinates.',
+    description: 'Returns a 7-day weather forecast for the given coordinates from Open-Meteo API.',
     inputSchema: GetWeatherForecastInputSchema,
     outputSchema: GetWeatherForecastOutputSchema,
   },
-  async (input) => {
-    // This is mock data. A real implementation would fetch from a weather service.
-    // The variety in mock data helps the model return more diverse results.
-    const mockForecasts = [
-        [{ day: 'Today', temp: 28, icon: 'Sunny', description: 'Clear skies' }, { day: 'Tue', temp: 26, icon: 'Partly-Cloudy', description: 'Few clouds' }, { day: 'Wed', temp: 24, icon: 'Rain', description: 'Light rain' }, { day: 'Thu', temp: 27, icon: 'Cloudy', description: 'Overcast' }, { day: 'Fri', temp: 29, icon: 'Sunny', description: 'Clear skies' }, { day: 'Sat', temp: 30, icon: 'Sunny', description: 'Very sunny' }, { day: 'Sun', temp: 28, icon: 'Partly-Cloudy', description: 'Some clouds' }],
-        [{ day: 'Today', temp: 15, icon: 'Rain', description: 'Showers' }, { day: 'Tue', temp: 17, icon: 'Cloudy', description: 'Overcast' }, { day: 'Wed', temp: 18, icon: 'Partly-Cloudy', description: 'A few clouds' }, { day: 'Thu', temp: 16, icon: 'Rain', description: 'Heavy rain' }, { day: 'Fri', temp: 19, icon: 'Sunny', description: 'Sunny' }, { day: 'Sat', temp: 20, icon: 'Sunny', description: 'Clear' }, { day: 'Sun', temp: 18, icon: 'Partly-Cloudy', description: 'Broken clouds' }],
-    ];
-    const forecast = mockForecasts[Math.floor(Math.random() * mockForecasts.length)];
-    return { forecast };
+  async ({ latitude, longitude }) => {
+    try {
+      const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max&timezone=auto`;
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch weather data: ${response.statusText}`);
+      }
+      const data = await response.json();
+
+      if (!data.daily || !data.daily.time || !data.daily.temperature_2m_max) {
+        throw new Error("Invalid weather data format from API.");
+      }
+
+      const forecast = data.daily.time.slice(0, 7).map((date: string, index: number) => {
+        const weatherCode = data.daily.weathercode[index];
+        const { icon, description } = wmoCodeToIconAndDescription[weatherCode] || { icon: 'Sunny', description: 'Clear' };
+        
+        let dayLabel;
+        if (index === 0) {
+            dayLabel = 'Today';
+        } else {
+            dayLabel = format(addDays(new Date(), index), 'EEE');
+        }
+
+        return {
+          day: dayLabel,
+          temp: Math.round(data.daily.temperature_2m_max[index]),
+          icon: icon,
+          description: description,
+        };
+      });
+
+      return { forecast };
+
+    } catch (error) {
+      console.error("Error in getWeatherTool:", error);
+      // Fallback to mock data on API failure to prevent app crash
+      return { 
+        forecast: [
+          { day: 'Today', temp: 25, icon: 'Cloudy', description: 'API Error' },
+          { day: 'Mon', temp: 25, icon: 'Cloudy', description: 'API Error' },
+          { day: 'Tue', temp: 25, icon: 'Cloudy', description: 'API Error' },
+          { day: 'Wed', temp: 25, icon: 'Cloudy', description: 'API Error' },
+          { day: 'Thu', temp: 25, icon: 'Cloudy', description: 'API Error' },
+          { day: 'Fri', temp: 25, icon: 'Cloudy', description: 'API Error' },
+          { day: 'Sat', temp: 25, icon: 'Cloudy', description: 'API Error' },
+        ]
+      };
+    }
   }
 );
 
