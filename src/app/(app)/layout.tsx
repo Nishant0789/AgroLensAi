@@ -95,10 +95,15 @@ export default function AppLayout({
 
         <div className="flex flex-col flex-1">
           <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/5 px-4 backdrop-blur-lg sm:px-6">
-            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setIsCollapsed(!isCollapsed)}>
-              <PanelLeft className="h-5 w-5" />
-              <span className="sr-only">Toggle sidebar</span>
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setIsCollapsed(!isCollapsed)}>
+                <PanelLeft className="h-5 w-5" />
+                <span className="sr-only">Toggle sidebar</span>
+              </Button>
+               <h1 className="text-xl font-semibold hidden md:block">
+                Welcome back, {user?.displayName?.split(' ')[0] || 'Farmer'}!
+              </h1>
+            </div>
             <div className="flex-1" />
             <UserNav />
           </header>

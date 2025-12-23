@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { mockScanHistory, mockWeather } from '@/lib/mock-data';
 import Image from 'next/image';
 import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
 
 const weatherIconMap = {
   sun: Sun,
@@ -101,7 +100,6 @@ function FieldJournal() {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
   const FADE_IN = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
@@ -109,16 +107,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <motion.h1
-        className="text-3xl font-bold font-headline"
-        variants={FADE_IN}
-        initial="hidden"
-        animate="visible"
-        transition={{ duration: 0.5 }}
-      >
-        Welcome back, {user?.displayName?.split(' ')[0] || 'Farmer'}!
-      </motion.h1>
-
       <motion.div
         variants={FADE_IN}
         initial="hidden"
