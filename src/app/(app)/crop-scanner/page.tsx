@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import analyzingAnimation from '../../../../public/lottie/analyzing.json';
 import { alertNearbyDiseases } from '@/ai/flows/geo-location-alerts';
 import { analyzeCrop, AnalyzeCropOutput } from '@/ai/ai-crop-scanner';
-import { useAuth } from '@/lib/auth.tsx';
+import { useAuth, useFirestore } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -41,6 +41,7 @@ export default function CropScannerPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const firestore = useFirestore();
   const [cooldown, setCooldown] = useState(0);
   const [language, setLanguage] = useState('English');
 
@@ -102,7 +103,7 @@ export default function CropScannerPage() {
 
       // Save scan to Firestore
       try {
-        const scansCollection = collection(user.firestore, `users/${user.uid}/scans`);
+        const scansCollection = collection(firestore, `users/${user.uid}/scans`);
         await addDoc(scansCollection, {
           userId: user.uid,
           imageUrl: imagePreview,
@@ -125,6 +126,7 @@ export default function CropScannerPage() {
                 longitude,
                 disease: analysisResult.disease,
                 sourceUserId: user.uid,
+                firestore: firestore,
               });
               toast({
                 title: "Community Alert Sent",
@@ -197,7 +199,7 @@ export default function CropScannerPage() {
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
-      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating' } />
+      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating'} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <Card className="glass-card">
