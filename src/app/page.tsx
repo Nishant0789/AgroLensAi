@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ArrowRight, Bot, Camera, LayoutDashboard, Map, Sparkles, StepForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -72,7 +71,7 @@ export default function HomePage() {
             <h1 className="text-4xl md:text-6xl font-headline font-bold mb-4 tracking-tight">
               Welcome to AgroLens AI
             </h1>
-            <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8 text-primary-foreground/80">
+            <p className="text-lg md:text-xl max-w-2xl mx-auto mb-8 text-foreground/80">
               Revolutionizing agriculture with the power of AI. Your digital partner for a healthier, more productive farm.
             </p>
             <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
