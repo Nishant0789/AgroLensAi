@@ -1,27 +1,27 @@
 'use server';
 
 /**
- * @fileOverview Generates a personalized growth roadmap for new farmers based on their location and crop type.
- * Also suggests profitable crops based on location.
+ * @fileOverview Generates a personalized growth roadmap for new farmers based on their location.
+ * It suggests profitable crops and creates a detailed guide for the best one.
  *
- * - suggestCrops - Suggests profitable crops based on location.
- * - SuggestCropsInput - Input for suggestCrops.
- * - SuggestCropsOutput - Output for suggestCrops.
- * - generateGrowthRoadmap - A function that handles the generation of the growth roadmap.
- * - GrowthRoadmapInput - The input type for the generateGrowthRoadmap function.
- * - GrowthRoadmapOutput - The return type for the generateGrowthRoadmap function.
+ * - generatePersonalizedGuide - The main function that drives the flow.
+ * - PersonalizedGuideInput - The input type for the function.
+ * - PersonalizedGuideOutput - The return type for the function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-// Schemas for Crop Suggestion Flow
-const SuggestCropsInputSchema = z.object({
+// Input Schema for the main flow
+const PersonalizedGuideInputSchema = z.object({
   location: z
     .string()
-    .describe('The geographical location of the farm (e.g., city, state, or coordinates).'),
+    .describe('The geographical location of the farm (e.g., city, state).'),
 });
-export type SuggestCropsInput = z.infer<typeof SuggestCropsInputSchema>;
+export type PersonalizedGuideInput = z.infer<typeof PersonalizedGuideInputSchema>;
+
+
+// --- Output Schemas ---
 
 const CropSuggestionSchema = z.object({
     name: z.string().describe("The name of the suggested crop."),
@@ -29,107 +29,66 @@ const CropSuggestionSchema = z.object({
     profitability: z.enum(["High", "Medium", "Low"]).describe("The predicted profitability of this crop in the region.")
 });
 
-const SuggestCropsOutputSchema = z.object({
-  crops: z.array(CropSuggestionSchema).describe('A list of suggested crops.'),
-});
-export type SuggestCropsOutput = z.infer<typeof SuggestCropsOutputSchema>;
-
-
-// Schemas for Growth Roadmap Flow
-const GrowthRoadmapInputSchema = z.object({
-  location: z
-    .string()
-    .describe('The geographical location of the farm (e.g., city, state).'),
-  cropType: z.string().describe('The type of crop being grown (e.g., wheat, corn, soybeans).'),
-});
-export type GrowthRoadmapInput = z.infer<typeof GrowthRoadmapInputSchema>;
-
 const RoadmapStepSchema = z.object({
     title: z.string().describe("The title of this roadmap step."),
     description: z.string().describe("A detailed description of the tasks and best practices for this step."),
     duration: z.string().describe("The estimated time to complete this step (e.g., '1-2 weeks').")
 });
 
-const GrowthRoadmapOutputSchema = z.object({
+const GrowthRoadmapSchema = z.object({
     title: z.string().describe("A summary title for the entire roadmap."),
     roadmap: z.array(RoadmapStepSchema).describe("A list of steps for the growth roadmap.")
 });
-export type GrowthRoadmapOutput = z.infer<typeof GrowthRoadmapOutputSchema>;
+
+// Final output schema combining suggestions and the roadmap for the top crop
+const PersonalizedGuideOutputSchema = z.object({
+  suggestions: z.array(CropSuggestionSchema).describe('A list of 3-4 suggested crops suitable for the location.'),
+  roadmap: GrowthRoadmapSchema.describe("A detailed growth roadmap for the most profitable and feasible suggested crop.")
+});
+export type PersonalizedGuideOutput = z.infer<typeof PersonalizedGuideOutputSchema>;
 
 
 /**
- * Suggests profitable crops for a given location.
+ * Generates crop suggestions and a growth roadmap for the best suggestion.
  */
-export async function suggestCrops(input: SuggestCropsInput): Promise<SuggestCropsOutput> {
-  return suggestCropsFlow(input);
+export async function generatePersonalizedGuide(input: PersonalizedGuideInput): Promise<PersonalizedGuideOutput> {
+  return personalizedGuideFlow(input);
 }
 
+const personalizedGuidePrompt = ai.definePrompt({
+    name: 'personalizedGuidePrompt',
+    input: { schema: PersonalizedGuideInputSchema },
+    output: { schema: PersonalizedGuideOutputSchema },
+    prompt: `You are an expert agricultural advisor. A new farmer in {{location}} needs guidance.
 
-/**
- * Generates a detailed growth roadmap for a given crop and location.
- */
-export async function generateGrowthRoadmap(input: GrowthRoadmapInput): Promise<GrowthRoadmapOutput> {
-  return generateGrowthRoadmapFlow(input);
-}
-
-
-const suggestCropsPrompt = ai.definePrompt({
-    name: 'suggestCropsPrompt',
-    input: { schema: SuggestCropsInputSchema },
-    output: { schema: SuggestCropsOutputSchema },
-    prompt: `You are an expert agricultural advisor. Based on the provided location, suggest 3-4 crops that are suitable for a new farmer to grow.
+    Your task is two-fold:
+    1.  Suggest 3-4 profitable and feasible crops for a new farmer in this location. For each crop, provide its name, a brief reason for its suitability (climate, demand), and a predicted profitability rating (High, Medium, or Low).
+    2.  From the crops you just suggested, select the BEST one for a new farmer (prioritizing ease of growth and profitability). Generate a detailed, step-by-step growth roadmap for that single crop.
     
-    Location: {{location}}
+    Each step in the roadmap should have a clear title, a duration estimate, and a detailed description of the necessary actions. Key stages to include are:
+    - Soil Preparation
+    - Planting/Sowing
+    - Germination & Early Growth
+    - Vegetative Growth & Maintenance (including irrigation, fertilization)
+    - Pest & Disease Management
+    - Flowering & Fruiting/Graining
+    - Harvesting
+    - Post-Harvest Handling
 
-    For each crop, provide its name, a brief reason for its suitability (considering climate, feasibility, and demand), and a predicted profitability rating (High, Medium, or Low).
+    Provide the final output in the specified JSON format, containing both the list of suggestions and the detailed roadmap for the top choice.
     `,
-    model: 'googleai/gemini-2.5-flash',
+    model: 'googleai/gemini-1.5-flash',
 });
 
-const suggestCropsFlow = ai.defineFlow(
+
+const personalizedGuideFlow = ai.defineFlow(
   {
-    name: 'suggestCropsFlow',
-    inputSchema: SuggestCropsInputSchema,
-    outputSchema: SuggestCropsOutputSchema,
+    name: 'personalizedGuideFlow',
+    inputSchema: PersonalizedGuideInputSchema,
+    outputSchema: PersonalizedGuideOutputSchema,
   },
   async (input) => {
-    const { output } = await suggestCropsPrompt(input);
-    return output!;
-  }
-);
-
-
-const generateRoadmapPrompt = ai.definePrompt({
-  name: 'growthRoadmapPrompt',
-  input: {schema: GrowthRoadmapInputSchema},
-  output: {schema: GrowthRoadmapOutputSchema},
-  prompt: `You are an expert agricultural advisor. A new farmer is seeking guidance on growing {{cropType}} in {{location}}.
-
-  Generate a detailed, step-by-step growth roadmap. Each step should have a clear title, a duration estimate, and a detailed description of the necessary actions.
-  
-  Key stages to include are:
-  - Soil Preparation
-  - Planting/Sowing
-  - Germination & Early Growth
-  - Vegetative Growth & Maintenance (including irrigation, fertilization)
-  - Pest & Disease Management
-  - Flowering & Fruiting/Graining
-  - Harvesting
-  - Post-Harvest Handling
-
-  Provide the output in the specified JSON format.
-  `,
-  model: 'googleai/gemini-2.5-flash',
-});
-
-const generateGrowthRoadmapFlow = ai.defineFlow(
-  {
-    name: 'generateGrowthRoadmapFlow',
-    inputSchema: GrowthRoadmapInputSchema,
-    outputSchema: GrowthRoadmapOutputSchema,
-  },
-async input => {
-    const {output} = await generateRoadmapPrompt(input);
+    const { output } = await personalizedGuidePrompt(input);
     return output!;
   }
 );

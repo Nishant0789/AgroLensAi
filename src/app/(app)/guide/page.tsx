@@ -2,107 +2,93 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { suggestCrops, generateGrowthRoadmap, type SuggestCropsOutput, type GrowthRoadmapOutput } from '@/ai/flows/newbie-to-pro-growth-roadmap';
+import { generatePersonalizedGuide, type PersonalizedGuideOutput } from '@/ai/flows/newbie-to-pro-growth-roadmap';
 import { Check, Loader, MapPin, Wheat, RefreshCw, DollarSign, Sparkles, Clock, Satellite, BrainCircuit, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useLocation } from '@/lib/location';
 
-type CropSuggestion = SuggestCropsOutput['crops'][0];
+type CropSuggestion = PersonalizedGuideOutput['suggestions'][0];
+type GrowthRoadmap = PersonalizedGuideOutput['roadmap'];
 
 const steps = [
   { id: 1, name: 'Crop Selection' },
   { id: 2, name: 'Growth Roadmap' },
 ];
 
-const loadingSteps = [
-    { text: "Getting your location...", icon: MapPin },
-    { text: "Analyzing local climate...", icon: Satellite },
-    { text: "Suggesting profitable crops...", icon: BrainCircuit }
-]
-
 export default function GuidePage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-  const [roadmapLoading, setRoadmapLoading] = useState(false);
-  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
-  const [roadmapError, setRoadmapError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  const [loadingStatus, setLoadingStatus] = useState("Getting your location...");
   const { location, loading: locationLoading, error: locationError, fetchLocation } = useLocation();
   
-  const [suggestions, setSuggestions] = useState<CropSuggestion[]>([]);
+  const [guideData, setGuideData] = useState<PersonalizedGuideOutput | null>(null);
   const [selectedCrop, setSelectedCrop] = useState<CropSuggestion | null>(null);
-  const [roadmap, setRoadmap] = useState<GrowthRoadmapOutput | null>(null);
 
-  const fetchSuggestions = async () => {
-    if (!location?.name) return;
+  const [cooldown, setCooldown] = useState(0);
 
-    setSuggestionsLoading(true);
-    setSuggestionsError(null);
-    setSuggestions([]);
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const fetchGuide = async () => {
+    if (!location?.name || cooldown > 0) return;
+
+    setLoading(true);
+    setError(null);
+    setGuideData(null);
+    setCooldown(10); // 10 second cooldown
     
     try {
-      setLoadingStatus("Suggesting profitable crops...");
-      const result = await suggestCrops({ location: location.name });
-      setSuggestions(result.crops);
+      const result = await generatePersonalizedGuide({ location: location.name });
+      setGuideData(result);
+      if (result.suggestions.length > 0) {
+        // Find the crop from suggestions that matches the roadmap title crop
+        const roadmapCropName = result.roadmap.title.split(" for ")[1]?.split(" in ")[0];
+        const topCrop = result.suggestions.find(s => s.name === roadmapCropName) || result.suggestions[0];
+        setSelectedCrop(topCrop);
+      }
     } catch (err) {
       console.error(err);
-      setSuggestionsError('Could not fetch crop suggestions. The AI assistant might be busy. Please try again in a moment.');
+      setError('Could not fetch your personalized guide. The AI assistant might be busy. Please try again in a moment.');
     } finally {
-      setSuggestionsLoading(false);
+      setLoading(false);
     }
   };
   
   useEffect(() => {
     if (location) {
-      fetchSuggestions();
+      fetchGuide();
     }
   }, [location]);
 
-  const handleSelectCrop = async (crop: CropSuggestion) => {
-    if (!location?.name) return;
-    setSelectedCrop(crop);
-    setRoadmapLoading(true);
-    setRoadmapError(null);
-    try {
-      const result = await generateGrowthRoadmap({ location: location.name, cropType: crop.name });
-      setRoadmap(result);
-      setCurrentStep(2);
-    } catch (error) {
-      console.error('Failed to generate roadmap:', error);
-      setRoadmapError('Could not generate the growth roadmap. The AI assistant might be busy. Please try again in a moment.');
-    } finally {
-      setRoadmapLoading(false);
-    }
-  };
 
   const handleStartOver = () => {
     setCurrentStep(1);
     setSelectedCrop(null);
-    setRoadmap(null);
-    setRoadmapError(null);
+    setGuideData(null);
+    setError(null);
     if (location) {
-        fetchSuggestions();
+        fetchGuide();
     } else {
         fetchLocation();
     }
   }
 
-  const handleSuggestionsRetry = () => {
+  const handleRetry = () => {
       if (!location) {
           fetchLocation();
       } else {
-          fetchSuggestions();
+          fetchGuide();
       }
-  }
-
-  const handleRoadmapRetry = () => {
-    if (selectedCrop) {
-      handleSelectCrop(selectedCrop);
-    }
   }
   
   const ProfitabilityBadge = ({ level }: { level: 'High' | 'Medium' | 'Low' }) => {
@@ -122,7 +108,7 @@ export default function GuidePage() {
   const LoadingIndicator = ({text}: {text?: string}) => (
      <div className="flex flex-col items-center justify-center min-h-[200px] gap-4">
         <Loader className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">{text || (suggestionsLoading ? loadingStatus : 'Fetching your location...')}</p>
+        <p className="text-muted-foreground">{text || 'Generating your personalized guide...'}</p>
       </div>
   );
 
@@ -130,7 +116,9 @@ export default function GuidePage() {
       <div className="flex flex-col items-center justify-center min-h-[200px] gap-2 text-center">
             <AlertTriangle className="w-8 h-8 text-destructive" />
             <p className="text-destructive max-w-sm">{error}</p>
-            <Button onClick={onRetry}><RefreshCw className="mr-2"/> Try Again</Button>
+            <Button onClick={onRetry} disabled={cooldown > 0}>
+                {cooldown > 0 ? `Please wait... (${cooldown}s)` : <><RefreshCw className="mr-2"/> Try Again</>}
+            </Button>
       </div>
   );
 
@@ -176,36 +164,38 @@ export default function GuidePage() {
                 {location && !locationLoading && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
               </CardHeader>
               <CardContent className="p-6">
-                {(locationLoading || (location && suggestionsLoading)) && <LoadingIndicator />}
+                {(locationLoading || loading) && <LoadingIndicator />}
                 
                 {!locationLoading && locationError && <ErrorDisplay error={locationError} onRetry={fetchLocation} />}
 
-                {location && !suggestionsLoading && suggestionsError && <ErrorDisplay error={suggestionsError} onRetry={handleSuggestionsRetry} />}
-
-                {location && !suggestionsLoading && roadmapError && <ErrorDisplay error={roadmapError} onRetry={handleRoadmapRetry} />}
+                {location && !loading && error && <ErrorDisplay error={error} onRetry={handleRetry} />}
                 
-                {location && !suggestionsLoading && !suggestionsError && !roadmapError && suggestions.length > 0 && (
+                {guideData && guideData.suggestions.length > 0 && (
                   <div className="grid md:grid-cols-2 gap-4">
-                    {suggestions.map((crop) => (
+                    {guideData.suggestions.map((crop) => (
                       <motion.div
                           key={crop.name}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                       >
-                          <Card className="hover:shadow-lg hover:border-primary/50 transition-all h-full flex flex-col">
+                          <Card className={`hover:shadow-lg transition-all h-full flex flex-col ${selectedCrop?.name === crop.name ? 'border-primary' : 'hover:border-primary/50'}`}>
                               <CardHeader>
-                                  <CardTitle className="flex items-center gap-2"><Sparkles className="text-primary"/>{crop.name}</CardTitle>
+                                  <CardTitle className="flex items-center gap-2">
+                                      {selectedCrop?.name === crop.name && <Sparkles className="text-primary"/>}
+                                      {crop.name}
+                                    </CardTitle>
                                   <ProfitabilityBadge level={crop.profitability}/>
                               </CardHeader>
                               <CardContent className="flex-1">
                                   <p className="text-sm text-muted-foreground">{crop.reason}</p>
                               </CardContent>
-                              <div className="p-4 pt-0">
-                              <Button onClick={() => handleSelectCrop(crop)} className="w-full" disabled={roadmapLoading}>
-                                  {roadmapLoading && selectedCrop?.name === crop.name ? <Loader className="mr-2 animate-spin"/> : <Wheat className="mr-2" />}
-                                  {roadmapLoading && selectedCrop?.name === crop.name ? 'Generating...' : `Generate Guide for ${crop.name}`}
-                              </Button>
-                              </div>
+                              {selectedCrop?.name === crop.name && (
+                                <div className="p-4 pt-0">
+                                <Button onClick={() => setCurrentStep(2)} className="w-full">
+                                    <Wheat className="mr-2" /> View Growth Roadmap
+                                </Button>
+                                </div>
+                              )}
                           </Card>
                       </motion.div>
                     ))}
@@ -215,20 +205,17 @@ export default function GuidePage() {
             </Card>
           )}
           
-          {currentStep === 2 && roadmap && selectedCrop && (
+          {currentStep === 2 && guideData && selectedCrop && (
             <div>
-                 {roadmapLoading ? (
-                    <LoadingIndicator text="Generating your personalized roadmap..."/>
-                ) : (
-                <>
+                 <>
                     <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold font-headline">{roadmap.title}</h2>
+                        <h2 className="text-2xl font-bold font-headline">{guideData.roadmap.title}</h2>
                         <p className="text-muted-foreground">A step-by-step guide for growing <span className="font-semibold text-primary">{selectedCrop.name}</span> in <span className="font-semibold text-primary">{location?.name}</span>.</p>
                     </div>
 
                     <div className="relative">
                         <div className="absolute left-4 top-4 h-full border-l-2 border-border border-dashed"></div>
-                        {roadmap.roadmap.map((item, index) => (
+                        {guideData.roadmap.roadmap.map((item, index) => (
                         <motion.div 
                             key={index} 
                             className="relative pl-10 mb-8"
@@ -254,12 +241,10 @@ export default function GuidePage() {
                         </motion.div>
                         ))}
                     </div>
-                    <Button onClick={handleStartOver} variant="outline" className="mt-6 w-full">
-                        <RefreshCw className="mr-2" />
-                        Start Over
+                    <Button onClick={handleStartOver} variant="outline" className="mt-6 w-full" disabled={cooldown > 0}>
+                        {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2" /> Start Over & Regenerate</>}
                     </Button>
                 </>
-              )}
             </div>
           )}
         </motion.div>
