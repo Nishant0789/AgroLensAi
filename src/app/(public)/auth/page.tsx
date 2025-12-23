@@ -5,10 +5,7 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AuthForm from '@/components/auth-form';
 import Logo from '@/components/logo';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth } from '@/lib/auth.tsx';
-
-const authBgImage = PlaceHolderImages.find((img) => img.id === 'auth-background');
 
 export default function AuthPage() {
   const { user, loading } = useAuth();
