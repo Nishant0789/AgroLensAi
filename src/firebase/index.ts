@@ -20,6 +20,7 @@ import { FirebaseClientProvider } from './client-provider';
 let firebaseApp: FirebaseApp;
 let auth: Auth;
 let firestore: Firestore;
+let persistenceEnabled = false;
 
 function initializeFirebase() {
   if (typeof window !== 'undefined') {
@@ -31,13 +32,22 @@ function initializeFirebase() {
     auth = getAuth(firebaseApp);
     firestore = getFirestore(firebaseApp);
 
-    try {
-      enableIndexedDbPersistence(firestore);
-    } catch (error: any) {
-      if (error.code !== 'failed-precondition') {
-        console.error("Firebase persistence error:", error);
-      }
+    if (!persistenceEnabled) {
+        try {
+          enableIndexedDbPersistence(firestore);
+          persistenceEnabled = true;
+        } catch (error: any) {
+          if (error.code == 'failed-precondition') {
+            // This can happen if multiple tabs are open.
+            // Persistence will be enabled in one tab, and will fail in others.
+            // This is a normal scenario.
+          } else if (error.code == 'unimplemented') {
+            // The current browser does not support all of the
+            // features required to enable persistence
+          }
+        }
     }
+
   }
   // On the server, we'll return undefined and let the client-side provider handle it.
   // This is a temporary state until the client hydrates.

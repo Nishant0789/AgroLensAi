@@ -12,7 +12,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { LocationProvider } from '@/lib/location';
 import { useCollection, useUser, useFirestore } from '@/firebase';
-import { useAuth } from '@/lib/auth';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 
@@ -50,26 +49,38 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useUser();
-  const { signOut } = useAuth();
+  const { user, loading: userLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const firestore = useFirestore();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!userLoading && !user) {
       router.push('/auth');
     }
-  }, [user, loading, router]);
+  }, [user, userLoading, router]);
 
-  if (loading || !user) {
+  if (userLoading || !user || !firestore) {
     return (
       <div className="flex h-screen items-center justify-center bg-background/0">
         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
+
+  // The signOut function can be defined here or imported from a context if needed elsewhere.
+  const signOut = async () => {
+    try {
+      // Assuming you have access to the auth instance
+      const { getAuth } = await import('firebase/auth');
+      const { firebaseApp } = await import('@/firebase').then(m => m.initializeFirebase());
+      await getAuth(firebaseApp).signOut();
+      router.push('/auth');
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
+  };
 
   return (
       <LocationProvider user={{...user, firestore: firestore}}>
