@@ -6,8 +6,9 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { suggestCrops, generateGrowthRoadmap, type SuggestCropsOutput, type GrowthRoadmapOutput } from '@/ai/flows/newbie-to-pro-growth-roadmap';
-import { Check, Loader, MapPin, Wheat, RefreshCw, DollarSign, Sparkles, Clock, Satellite, BrainCircuit } from 'lucide-react';
+import { Check, Loader, MapPin, Wheat, RefreshCw, DollarSign, Sparkles, Clock, Satellite, BrainCircuit, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useLocation } from '@/lib/location';
 
 type CropSuggestion = SuggestCropsOutput['crops'][0];
 
@@ -24,73 +25,56 @@ const loadingSteps = [
 
 export default function GuidePage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  
   const [loadingStatus, setLoadingStatus] = useState("Getting your location...");
-  const [location, setLocation] = useState<{ name: string; lat: number, lon: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { location, loading: locationLoading, error: locationError, fetchLocation } = useLocation();
+  
   const [suggestions, setSuggestions] = useState<CropSuggestion[]>([]);
   const [selectedCrop, setSelectedCrop] = useState<CropSuggestion | null>(null);
   const [roadmap, setRoadmap] = useState<GrowthRoadmapOutput | null>(null);
 
-  const fetchLocationAndSuggestions = async () => {
-    setIsLoading(true);
-    setError(null);
+  const fetchSuggestions = async () => {
+    if (!location) return;
+
+    setSuggestionsLoading(true);
+    setSuggestionsError(null);
     setSuggestions([]);
-    setLoadingStatus("Getting your location...");
-
-
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser.');
-      setIsLoading(false);
-      return;
+    
+    try {
+      setLoadingStatus("Suggesting profitable crops...");
+      const result = await suggestCrops({ location: location.name });
+      setSuggestions(result.crops);
+    } catch (err) {
+      console.error(err);
+      setSuggestionsError('Could not fetch crop suggestions. The AI assistant might be busy. Please try again in a moment.');
+    } finally {
+      setSuggestionsLoading(false);
     }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          // Get location name
-          setLoadingStatus("Analyzing local climate...");
-          const geoResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
-          const geoData = await geoResponse.json();
-          const locationName = geoData.city ? `${geoData.city}, ${geoData.localityInfo.administrative[1].name}` : 'your current location';
-          setLocation({ name: locationName, lat: latitude, lon: longitude });
-
-          // Get crop suggestions
-          setLoadingStatus("Suggesting profitable crops...");
-          const result = await suggestCrops({ location: locationName });
-          setSuggestions(result.crops);
-        } catch (err) {
-          console.error(err);
-          setError('Could not fetch crop suggestions for your location. Please try again.');
-        } finally {
-          setIsLoading(false);
-        }
-      },
-      (err) => {
-        setError('Location access denied. Please enable it in your browser settings and try again.');
-        setIsLoading(false);
-      }
-    );
   };
   
   useEffect(() => {
-    fetchLocationAndSuggestions();
-  }, []);
+    if (location) {
+      fetchSuggestions();
+    }
+  }, [location]);
 
   const handleSelectCrop = async (crop: CropSuggestion) => {
     if (!location) return;
     setSelectedCrop(crop);
-    setIsLoading(true);
+    setRoadmapLoading(true);
+    setSuggestionsError(null);
     try {
       const result = await generateGrowthRoadmap({ location: location.name, cropType: crop.name });
       setRoadmap(result);
       setCurrentStep(2);
     } catch (error) {
       console.error('Failed to generate roadmap:', error);
-      setError('Could not generate the growth roadmap. Please try again.');
+      setSuggestionsError('Could not generate the growth roadmap. Please try again.');
     } finally {
-      setIsLoading(false);
+      setRoadmapLoading(false);
     }
   };
 
@@ -98,7 +82,19 @@ export default function GuidePage() {
     setCurrentStep(1);
     setSelectedCrop(null);
     setRoadmap(null);
-    fetchLocationAndSuggestions();
+    if (location) {
+        fetchSuggestions();
+    } else {
+        fetchLocation();
+    }
+  }
+
+  const handleRetry = () => {
+      if (!location) {
+          fetchLocation();
+      } else {
+          fetchSuggestions();
+      }
   }
   
   const ProfitabilityBadge = ({ level }: { level: 'High' | 'Medium' | 'Low' }) => {
@@ -117,30 +113,16 @@ export default function GuidePage() {
 
   const LoadingIndicator = () => (
      <div className="flex flex-col items-center justify-center min-h-[200px] gap-4">
-        <div className="w-full max-w-xs space-y-3">
-          {loadingSteps.map((step, index) => {
-            const currentIndex = loadingSteps.findIndex(s => s.text === loadingStatus);
-            const isActive = index === currentIndex;
-            const isDone = index < currentIndex;
-            const Icon = step.icon;
+        <Loader className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">{suggestionsLoading ? loadingStatus : 'Fetching your location...'}</p>
+      </div>
+  );
 
-            return (
-              <motion.div 
-                key={step.text} 
-                className="flex items-center gap-3"
-                initial={{ opacity: 0.5, x: -10 }}
-                animate={{ opacity: isDone || isActive ? 1 : 0.5, x: 0 }}
-              >
-                  <div className={`flex items-center justify-center w-6 h-6 rounded-full ${isDone ? 'bg-green-500' : 'bg-primary/20'}`}>
-                      {isDone ? <Check className="w-4 h-4 text-white" /> : <Icon className={`w-4 h-4 text-primary ${isActive ? 'animate-pulse' : ''}`} />}
-                  </div>
-                  <span className={`text-sm ${isActive ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
-                      {step.text}
-                  </span>
-              </motion.div>
-            )
-          })}
-        </div>
+  const ErrorDisplay = ({ error, onRetry }: { error: string, onRetry: () => void }) => (
+      <div className="flex flex-col items-center justify-center min-h-[200px] gap-2 text-center">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
+            <p className="text-destructive max-w-sm">{error}</p>
+            <Button onClick={onRetry}><RefreshCw className="mr-2"/> Try Again</Button>
       </div>
   );
 
@@ -183,17 +165,16 @@ export default function GuidePage() {
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle>AI Crop Suggestions for Your Area</CardTitle>
-                {location && !isLoading && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
+                {location && !locationLoading && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
               </CardHeader>
               <CardContent className="p-6">
-                {isLoading && <LoadingIndicator />}
-                {error && !isLoading && (
-                  <div className="flex flex-col items-center justify-center min-h-[200px] gap-2 text-center">
-                       <p className="text-destructive">{error}</p>
-                       <Button onClick={fetchLocationAndSuggestions}><RefreshCw className="mr-2"/> Try Again</Button>
-                  </div>
-                )}
-                {!isLoading && !error && suggestions.length > 0 && (
+                {(locationLoading || (location && suggestionsLoading)) && <LoadingIndicator />}
+                
+                {!locationLoading && locationError && <ErrorDisplay error={locationError} onRetry={fetchLocation} />}
+
+                {location && !suggestionsLoading && suggestionsError && <ErrorDisplay error={suggestionsError} onRetry={fetchSuggestions} />}
+                
+                {location && !suggestionsLoading && !suggestionsError && suggestions.length > 0 && (
                   <div className="grid md:grid-cols-2 gap-4">
                     {suggestions.map((crop) => (
                       <motion.div
@@ -210,9 +191,9 @@ export default function GuidePage() {
                                   <p className="text-sm text-muted-foreground">{crop.reason}</p>
                               </CardContent>
                               <div className="p-4 pt-0">
-                              <Button onClick={() => handleSelectCrop(crop)} className="w-full" disabled={isLoading}>
-                                  {isLoading && selectedCrop?.name === crop.name ? <Loader className="mr-2 animate-spin"/> : <Wheat className="mr-2" />}
-                                  {isLoading && selectedCrop?.name === crop.name ? 'Generating...' : `Generate Guide for ${crop.name}`}
+                              <Button onClick={() => handleSelectCrop(crop)} className="w-full" disabled={roadmapLoading}>
+                                  {roadmapLoading && selectedCrop?.name === crop.name ? <Loader className="mr-2 animate-spin"/> : <Wheat className="mr-2" />}
+                                  {roadmapLoading && selectedCrop?.name === crop.name ? 'Generating...' : `Generate Guide for ${crop.name}`}
                               </Button>
                               </div>
                           </Card>
@@ -226,7 +207,7 @@ export default function GuidePage() {
           
           {currentStep === 2 && roadmap && selectedCrop && (
             <div>
-                 {isLoading ? (
+                 {roadmapLoading ? (
                     <div className="flex flex-col items-center justify-center min-h-[200px] gap-2">
                         <Loader className="w-8 h-8 animate-spin text-primary" />
                         <p className="text-muted-foreground">Generating your personalized roadmap...</p>

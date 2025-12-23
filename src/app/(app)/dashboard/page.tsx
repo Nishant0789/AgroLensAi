@@ -6,68 +6,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { mockScanHistory, mockWeather } from '@/lib/mock-data';
 import Image from 'next/image';
-import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-const weatherIconMap = {
-  sun: Sun,
-  cloud: Cloud,
-  rain: CloudRain,
-  snow: Snowflake,
-  wind: Wind,
-  'cloud-sun': CloudSun,
-};
+import { useLocation } from '@/lib/location';
 
 function WeatherCard() {
-  const [location, setLocation] = useState<{ city: string; country: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCity = async (latitude: number, longitude: number) => {
-    try {
-      // Using a free reverse geocoding API. In a real app, you'd use a more robust service.
-      const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch location data.');
-      }
-      const data = await response.json();
-      if (data.city && data.countryName) {
-        setLocation({ city: data.city, country: data.countryName });
-      } else {
-        throw new Error('Could not determine city from coordinates.');
-      }
-    } catch (err: any) {
-       setError('Could not fetch location name. Please try again.');
-       console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGetLocation = () => {
-    setLoading(true);
-    setError(null);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          fetchCity(latitude, longitude);
-        },
-        (err) => {
-          setError('Location access denied. Please enable it in your browser settings.');
-          setLoading(false);
-        }
-      );
-    } else {
-      setError('Geolocation is not supported by your browser.');
-      setLoading(false);
-    }
-  };
-  
-  useEffect(() => {
-    handleGetLocation();
-  }, []);
+  const { location, loading, error, fetchLocation } = useLocation();
 
   return (
     <Card className="glass-card">
@@ -89,11 +33,12 @@ function WeatherCard() {
         )}
         {error && !loading && (
             <div className="flex flex-col items-center justify-center h-40 gap-2 text-center">
-                 <p className="text-destructive">{error}</p>
-                 <Button onClick={handleGetLocation}>Try Again</Button>
+                 <AlertTriangle className="w-8 h-8 text-destructive" />
+                 <p className="text-destructive max-w-sm">{error}</p>
+                 <Button onClick={fetchLocation}>Try Again</Button>
             </div>
         )}
-        {!loading && !error && (
+        {!loading && !error && location && (
             <div className="flex justify-between overflow-x-auto gap-4">
             {mockWeather.map((day, index) => {
                 const Icon = weatherIconMap[day.icon];
