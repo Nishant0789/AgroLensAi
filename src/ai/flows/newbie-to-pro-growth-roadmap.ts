@@ -77,7 +77,7 @@ const personalizedGuidePrompt = ai.definePrompt({
 
     Provide the final output in the specified JSON format, containing both the list of suggestions and the detailed roadmap for the top choice.
     `,
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-2.5-flash',
 });
 
 
