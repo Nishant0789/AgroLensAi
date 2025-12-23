@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/auth.tsx';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { translateContent } from '@/ai/flows/translate-content';
 
 type ScanResult = AnalyzeCropOutput;
 
@@ -32,8 +33,9 @@ const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: 
 
 export default function CropScannerPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'analyzing' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'analyzing' | 'translating' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [originalResult, setOriginalResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -57,49 +59,47 @@ export default function CropScannerPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
-        setStatus('idle');
-        setResult(null);
-        setError(null);
+        reset();
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleScan = async (lang = language) => {
+  const handleScan = async () => {
     if (!imagePreview || !user || cooldown > 0) return;
     setStatus('analyzing');
     setError(null);
+    setResult(null);
+    setOriginalResult(null);
+    setLanguage('English'); // Default to English for new scans
     setCooldown(10); // Start 10-second cooldown
     
     try {
       const analysisResult = await analyzeCrop({
         photoDataUri: imagePreview,
-        language: lang,
+        language: 'English', // Always get original analysis in English
       });
       
       setResult(analysisResult);
+      setOriginalResult(analysisResult); // Save the original English result
       setStatus('success');
 
-      // Save scan to Firestore only on the first successful scan, not on language change
-      if (status !== 'success') {
-          try {
-            const scansCollection = collection(user.firestore, `users/${user.uid}/scans`);
-            await addDoc(scansCollection, {
-              userId: user.uid,
-              imageUrl: imagePreview, // Storing data URI, for a real app, use Firebase Storage
-              disease: analysisResult.disease,
-              solution: analysisResult.organicSolution, // Storing one solution for brevity in history
-              createdAt: serverTimestamp(),
-            });
-          } catch (e) {
-              console.error("Failed to save scan history:", e);
-              // Non-critical error, so we don't show a toast to the user
-          }
+      // Save scan to Firestore
+      try {
+        const scansCollection = collection(user.firestore, `users/${user.uid}/scans`);
+        await addDoc(scansCollection, {
+          userId: user.uid,
+          imageUrl: imagePreview,
+          disease: analysisResult.disease,
+          solution: analysisResult.organicSolution,
+          createdAt: serverTimestamp(),
+        });
+      } catch (e) {
+          console.error("Failed to save scan history:", e);
       }
       
-      // Trigger geo-location alert in the background
-      // Only send alert if a disease was detected and it's the first scan
-      if (status !== 'success' && analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
+      // Trigger geo-location alert if a disease was detected
+      if (analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
@@ -116,16 +116,10 @@ export default function CropScannerPage() {
               });
             } catch (error) {
                console.error("Failed to send location alert:", error);
-               // Don't bother the user with a toast for this background task failing
             }
           },
           (error) => {
             console.error("Geolocation error for alerts:", error);
-            toast({
-                variant: 'destructive',
-                title: "Could not send alert",
-                description: "Could not get your location to alert nearby farmers."
-            })
           }
         );
       }
@@ -137,10 +131,29 @@ export default function CropScannerPage() {
     }
   };
 
-  const handleLanguageChange = (lang: string) => {
+  const handleLanguageChange = async (lang: string) => {
     setLanguage(lang);
-    if (status === 'success' && imagePreview) {
-      handleScan(lang);
+    if (status !== 'success' || !originalResult) {
+      return;
+    }
+    
+    if (lang === 'English') {
+        setResult(originalResult);
+        return;
+    }
+
+    setStatus('translating');
+    try {
+        const translatedResult = await translateContent({
+            content: originalResult,
+            targetLanguage: lang,
+        });
+        setResult(translatedResult);
+    } catch(err) {
+        console.error("Error translating content:", err);
+        setError("Failed to translate the result. Please try again.");
+    } finally {
+        setStatus('success');
     }
   };
 
@@ -148,6 +161,7 @@ export default function CropScannerPage() {
       setImagePreview(null);
       setStatus('idle');
       setResult(null);
+      setOriginalResult(null);
       setError(null);
       if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -167,7 +181,7 @@ export default function CropScannerPage() {
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
-      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing'} />
+      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating' || !result} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <Card className="glass-card">
@@ -193,7 +207,7 @@ export default function CropScannerPage() {
 
             {imagePreview && (
               <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={() => handleScan()} disabled={status === 'analyzing' || !user || cooldown > 0} className="w-full">
+                 <Button onClick={handleScan} disabled={status === 'analyzing' || !user || cooldown > 0} className="w-full">
                     {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
                      cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
@@ -224,6 +238,12 @@ export default function CropScannerPage() {
                       <Lottie animationData={analyzingAnimation} style={{ height: 150 }} />
                       <p className="font-semibold text-primary">Analyzing image...</p>
                       <p className="text-sm text-muted-foreground">This may take a moment.</p>
+                    </div>
+                  )}
+                  {status === 'translating' && (
+                    <div className="text-center">
+                      <Loader className="w-12 h-12 animate-spin text-primary mb-4" />
+                      <p className="font-semibold text-primary">Translating to {language}...</p>
                     </div>
                   )}
                   {status === 'error' && (
