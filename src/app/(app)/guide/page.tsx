@@ -76,21 +76,24 @@ export default function GuidePage() {
 
       if (language === 'English') {
         setGuideData(result);
+        if (result.suggestions.length > 0) {
+          const roadmapCropName = result.roadmap.title.split(" for ")[1]?.split(" in ")[0];
+          const topCrop = result.suggestions.find((s: any) => s.name === roadmapCropName) || result.suggestions[0];
+          
+          setSelectedCrop(topCrop);
+          setSelectedRoadmap(result.roadmap);
+        }
       } else {
         const translatedResult = await translateContent({
             content: result,
             targetLanguage: language,
         } as TranslateContentInput);
         setGuideData(translatedResult);
-      }
-
-      if (result.suggestions.length > 0) {
-        const currentData = (language === 'English' ? result : guideData) || result;
-        const roadmapCropName = result.roadmap.title.split(" for ")[1]?.split(" in ")[0];
-        const topCrop = currentData.suggestions.find((s: any, i: number) => result.suggestions[i].name === roadmapCropName) || currentData.suggestions[0];
-        
-        setSelectedCrop(topCrop);
-        setSelectedRoadmap(currentData.roadmap);
+        if (translatedResult.suggestions.length > 0) {
+            const topCrop = translatedResult.suggestions[0];
+            setSelectedCrop(topCrop);
+            setSelectedRoadmap(translatedResult.roadmap);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -110,7 +113,6 @@ export default function GuidePage() {
     setLoading(true);
     if (lang === 'English') {
         setGuideData(originalGuideData);
-        // Also update selected crop and roadmap to english versions
         if (originalGuideData.suggestions.length > 0) {
             const roadmapCropName = originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0];
             const topCrop = originalGuideData.suggestions.find(s => s.name === roadmapCropName) || originalGuideData.suggestions[0];
@@ -128,12 +130,12 @@ export default function GuidePage() {
         } as TranslateContentInput);
         setGuideData(translatedResult);
 
-        // find which crop was selected based on index
-        const originalIndex = originalGuideData.suggestions.findIndex(s => s.name === selectedCrop?.name || s.name === originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0]);
-
         if (translatedResult.suggestions.length > 0) {
-          const translatedTopCrop = translatedResult.suggestions[originalIndex] || translatedResult.suggestions[0];
-          setSelectedCrop(translatedTopCrop);
+          const topCrop = translatedResult.suggestions.find((s: any, i: number) => {
+              const originalRoadmapCropName = originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0];
+              return originalGuideData.suggestions[i].name === originalRoadmapCropName;
+          }) || translatedResult.suggestions[0];
+          setSelectedCrop(topCrop);
           setSelectedRoadmap(translatedResult.roadmap);
         }
 
