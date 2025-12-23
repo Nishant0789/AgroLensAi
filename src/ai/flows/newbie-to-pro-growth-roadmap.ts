@@ -44,8 +44,15 @@ const GrowthRoadmapInputSchema = z.object({
 });
 export type GrowthRoadmapInput = z.infer<typeof GrowthRoadmapInputSchema>;
 
+const RoadmapStepSchema = z.object({
+    title: z.string().describe("The title of this roadmap step."),
+    description: z.string().describe("A detailed description of the tasks and best practices for this step."),
+    duration: z.string().describe("The estimated time to complete this step (e.g., '1-2 weeks').")
+});
+
 const GrowthRoadmapOutputSchema = z.object({
-  roadmap: z.string().describe('A detailed growth roadmap tailored to the specific location and crop type.'),
+    title: z.string().describe("A summary title for the entire roadmap."),
+    roadmap: z.array(RoadmapStepSchema).describe("A list of steps for the growth roadmap.")
 });
 export type GrowthRoadmapOutput = z.infer<typeof GrowthRoadmapOutputSchema>;
 
@@ -97,15 +104,19 @@ const generateRoadmapPrompt = ai.definePrompt({
   output: {schema: GrowthRoadmapOutputSchema},
   prompt: `You are an expert agricultural advisor. A new farmer is seeking guidance on growing {{cropType}} in {{location}}.
 
-  Based on the location and crop type, generate a detailed growth roadmap that includes key stages, best practices, and potential challenges.
-  Include information about:
-  - Optimal planting times.
-  - Soil preparation techniques.
-  - Irrigation strategies.
-  - Pest and disease management.
-  - Harvesting guidelines.
+  Generate a detailed, step-by-step growth roadmap. Each step should have a clear title, a duration estimate, and a detailed description of the necessary actions.
+  
+  Key stages to include are:
+  - Soil Preparation
+  - Planting/Sowing
+  - Germination & Early Growth
+  - Vegetative Growth & Maintenance (including irrigation, fertilization)
+  - Pest & Disease Management
+  - Flowering & Fruiting/Graining
+  - Harvesting
+  - Post-Harvest Handling
 
-  The roadmap should be easy to understand and actionable for a beginner.
+  Provide the output in the specified JSON format.
   `,
 });
 
