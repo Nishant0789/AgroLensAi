@@ -7,11 +7,11 @@ import Lottie from 'lottie-react';
 import { Camera, Upload, CheckCircle, AlertTriangle, Lightbulb, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import analyzingAnimation from '../../../../public/lottie/analyzing.json';
 import { alertNearbyDiseases } from '@/ai/flows/geo-location-alerts';
 import { analyzeCrop } from '@/ai/ai-crop-scanner';
+import { useAuth } from '@/lib/auth';
 
 type ScanResult = {
   disease: string;
@@ -25,6 +25,7 @@ export default function CropScannerPage() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -41,7 +42,7 @@ export default function CropScannerPage() {
   };
 
   const handleScan = async () => {
-    if (!imagePreview) return;
+    if (!imagePreview || !user) return;
     setStatus('analyzing');
     setError(null);
     
@@ -60,29 +61,37 @@ export default function CropScannerPage() {
       setStatus('success');
       
       // Trigger geo-location alert in the background
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            await alertNearbyDiseases({
-              latitude,
-              longitude,
-              disease: scanResult.disease,
-            });
+      // Only send alert if a disease was detected
+      if (scanResult.disease && scanResult.disease.toLowerCase() !== 'healthy') {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            try {
+              await alertNearbyDiseases({
+                latitude,
+                longitude,
+                disease: scanResult.disease,
+                sourceUserId: user.uid,
+              });
+              toast({
+                title: "Community Alert Sent",
+                description: `Notified nearby farmers of ${scanResult.disease}.`,
+              });
+            } catch (error) {
+               console.error("Failed to send location alert:", error);
+               // Don't bother the user with a toast for this background task failing
+            }
+          },
+          (error) => {
+            console.error("Geolocation error for alerts:", error);
             toast({
-              title: "Location Alert Sent",
-              description: `Notified nearby farmers of ${scanResult.disease}.`,
-            });
-          } catch (error) {
-             console.error("Failed to send location alert:", error);
-             // Don't bother the user with a toast for this background task failing
+                variant: 'destructive',
+                title: "Could not send alert",
+                description: "Could not get your location to alert nearby farmers."
+            })
           }
-        },
-        (error) => {
-          console.error("Geolocation error for alerts:", error);
-          // Don't bother the user with a toast for this background task failing
-        }
-      );
+        );
+      }
 
     } catch (err) {
         console.error("Error analyzing crop:", err);
@@ -118,7 +127,7 @@ export default function CropScannerPage() {
           <CardContent className="p-6 flex flex-col items-center justify-center min-h-[300px]">
             {imagePreview ? (
               <div className="relative w-full aspect-video">
-                <Image src={imagePreview} alt="Crop preview" layout="fill" objectFit="contain" className="rounded-md" />
+                <Image src={imagePreview} alt="Crop preview" fill objectFit="contain" className="rounded-md" />
               </div>
             ) : (
               <div className="text-center text-muted-foreground">
@@ -137,7 +146,7 @@ export default function CropScannerPage() {
 
             {imagePreview && (
               <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={handleScan} disabled={status === 'analyzing'} className="w-full">
+                 <Button onClick={handleScan} disabled={status === 'analyzing' || !user} className="w-full">
                     {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> : 'Scan Crop'}
                 </Button>
                 <Button onClick={reset} variant="outline" className="w-full" disabled={status === 'analyzing'}>

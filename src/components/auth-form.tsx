@@ -43,7 +43,7 @@ const variants = {
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const [direction, setDirection] = useState(0);
-  const { signIn } = useAuth();
+  const { signInWithGoogle } = useAuth();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -59,15 +59,13 @@ export default function AuthForm() {
   };
   
   const onLogin = (data: LoginFormValues) => {
-    console.log('Login data:', data);
-    // In a real app, you would call Firebase auth here
-    signIn();
+    console.log('Login with email/password is not implemented in this demo.');
+    signInWithGoogle(); // Default to Google sign-in for simplicity
   };
 
   const onSignup = (data: SignupFormValues) => {
-    console.log('Signup data:', data);
-    // In a real app, you would call Firebase auth here
-    signIn();
+    console.log('Sign up with email/password is not implemented in this demo.');
+    signInWithGoogle(); // Default to Google sign-in for simplicity
   };
   
   return (
@@ -111,7 +109,7 @@ export default function AuthForm() {
                 </div>
               </div>
               
-              <Button variant="outline" className="w-full" onClick={signIn}><Chrome className="mr-2 h-4 w-4" /> Google</Button>
+              <Button variant="outline" className="w-full" onClick={signInWithGoogle}><Chrome className="mr-2 h-4 w-4" /> Google</Button>
               
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Don't have an account?{' '}
