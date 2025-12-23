@@ -53,7 +53,7 @@ const getWeatherTool = ai.defineTool(
 
 const prompt = ai.definePrompt({
     name: 'weatherForecastPrompt',
-    system: "You are a weather assistant. Use the provided tool to get the 7-day forecast and return it to the user in the specified format. Use the exact data from the tool.",
+    system: "You are a weather assistant. Use the provided tool to get the 7-day forecast for the given location and return it to the user in the specified format.",
     tools: [getWeatherTool],
     output: { schema: GetWeatherForecastOutputSchema },
 });
@@ -65,8 +65,9 @@ const getWeatherForecastFlow = ai.defineFlow(
     outputSchema: GetWeatherForecastOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt({latitude: input.latitude, longitude: input.longitude });
-    return output!;
+    // Call the tool directly for reliability instead of relying on the prompt.
+    const forecast = await getWeatherTool(input);
+    return forecast;
   }
 );
 
