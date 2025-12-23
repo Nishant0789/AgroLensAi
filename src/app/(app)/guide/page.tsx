@@ -19,10 +19,10 @@ const steps = [
   { id: 2, name: 'Growth Roadmap' },
 ];
 
-const LanguageSwitcher = ({ language, setLanguage, disabled }: { language: string; setLanguage: (lang: string) => void; disabled: boolean }) => (
+const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: string; onLanguageChange: (lang: string) => void; disabled: boolean }) => (
     <div className="flex items-center justify-center gap-2 my-4">
         <Languages className="text-muted-foreground"/>
-        <Tabs defaultValue={language} onValueChange={setLanguage} className="w-[150px]">
+        <Tabs defaultValue={language} onValueChange={onLanguageChange} className="w-[150px]">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="English" disabled={disabled}>English</TabsTrigger>
                 <TabsTrigger value="Hindi" disabled={disabled}>हिंदी</TabsTrigger>
@@ -63,6 +63,7 @@ export default function GuidePage() {
     setGuideData(null);
     setSelectedCrop(null);
     setSelectedRoadmap(null);
+    setCurrentStep(1);
     setCooldown(10); // 10 second cooldown
     
     try {
@@ -91,7 +92,7 @@ export default function GuidePage() {
   }
   
   useEffect(() => {
-    if (location) {
+    if (location && !guideData) {
       fetchGuide();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,11 +104,12 @@ export default function GuidePage() {
     setSelectedCrop(crop);
     
     setLoading(true);
+    setCurrentStep(2);
     try {
-        const result = await generatePersonalizedGuide({ location: location.name, language: language });
+        // We reuse the originally fetched roadmap data, but create a new title for the selected crop
         const newRoadmap = {
-            ...result.roadmap,
-            title: `Growth Roadmap for ${crop.name} in ${location?.name}`
+            ...guideData.roadmap,
+            title: `Growth Roadmap for ${crop.name}`
         }
         setSelectedRoadmap(newRoadmap);
     } catch (err) {
@@ -115,8 +117,6 @@ export default function GuidePage() {
     } finally {
         setLoading(false);
     }
-
-    setCurrentStep(2);
   }
 
   const handleStartOver = () => {
@@ -125,13 +125,8 @@ export default function GuidePage() {
   }
   
   const handleRegenerate = () => {
-    setCurrentStep(1);
-    setSelectedCrop(null);
-    setGuideData(null);
-    setSelectedRoadmap(null);
-    setError(null);
     if (location) {
-        fetchGuide();
+        fetchGuide(language);
     } else {
         fetchLocation();
     }
@@ -141,7 +136,7 @@ export default function GuidePage() {
       if (!location) {
           fetchLocation();
       } else {
-          fetchGuide();
+          fetchGuide(language);
       }
   }
   
@@ -222,7 +217,7 @@ export default function GuidePage() {
                 {location && !locationLoading && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
               </CardHeader>
               <CardContent className="p-6">
-                <LanguageSwitcher language={language} setLanguage={handleLanguageChange} disabled={loading || locationLoading} />
+                <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={loading || locationLoading} />
                 {(locationLoading || (loading && !guideData)) && <LoadingIndicator />}
                 
                 {!locationLoading && locationError && <ErrorDisplay error={locationError} onRetry={fetchLocation} />}

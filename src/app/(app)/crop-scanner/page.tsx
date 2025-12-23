@@ -18,10 +18,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 
 type ScanResult = AnalyzeCropOutput;
 
-const LanguageSwitcher = ({ language, setLanguage, disabled }: { language: string; setLanguage: (lang: string) => void; disabled: boolean }) => (
+const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: string; onLanguageChange: (lang: string) => void; disabled: boolean }) => (
     <div className="flex items-center justify-center gap-2 mb-4">
         <Languages className="text-muted-foreground"/>
-        <Tabs defaultValue={language} onValueChange={setLanguage} className="w-[150px]">
+        <Tabs defaultValue={language} onValueChange={onLanguageChange} className="w-[150px]">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="English" disabled={disabled}>English</TabsTrigger>
                 <TabsTrigger value="Hindi" disabled={disabled}>हिंदी</TabsTrigger>
@@ -65,7 +65,7 @@ export default function CropScannerPage() {
     }
   };
 
-  const handleScan = async () => {
+  const handleScan = async (lang = language) => {
     if (!imagePreview || !user || cooldown > 0) return;
     setStatus('analyzing');
     setError(null);
@@ -74,30 +74,32 @@ export default function CropScannerPage() {
     try {
       const analysisResult = await analyzeCrop({
         photoDataUri: imagePreview,
-        language: language,
+        language: lang,
       });
       
       setResult(analysisResult);
       setStatus('success');
 
-      // Save scan to Firestore
-      try {
-        const scansCollection = collection(user.firestore, `users/${user.uid}/scans`);
-        await addDoc(scansCollection, {
-          userId: user.uid,
-          imageUrl: imagePreview, // Storing data URI, for a real app, use Firebase Storage
-          disease: analysisResult.disease,
-          solution: analysisResult.organicSolution, // Storing one solution for brevity in history
-          createdAt: serverTimestamp(),
-        });
-      } catch (e) {
-          console.error("Failed to save scan history:", e);
-          // Non-critical error, so we don't show a toast to the user
+      // Save scan to Firestore only on the first successful scan, not on language change
+      if (status !== 'success') {
+          try {
+            const scansCollection = collection(user.firestore, `users/${user.uid}/scans`);
+            await addDoc(scansCollection, {
+              userId: user.uid,
+              imageUrl: imagePreview, // Storing data URI, for a real app, use Firebase Storage
+              disease: analysisResult.disease,
+              solution: analysisResult.organicSolution, // Storing one solution for brevity in history
+              createdAt: serverTimestamp(),
+            });
+          } catch (e) {
+              console.error("Failed to save scan history:", e);
+              // Non-critical error, so we don't show a toast to the user
+          }
       }
       
       // Trigger geo-location alert in the background
-      // Only send alert if a disease was detected
-      if (analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
+      // Only send alert if a disease was detected and it's the first scan
+      if (status !== 'success' && analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
@@ -135,6 +137,13 @@ export default function CropScannerPage() {
     }
   };
 
+  const handleLanguageChange = (lang: string) => {
+    setLanguage(lang);
+    if (status === 'success' && imagePreview) {
+      handleScan(lang);
+    }
+  };
+
   const reset = () => {
       setImagePreview(null);
       setStatus('idle');
@@ -158,7 +167,7 @@ export default function CropScannerPage() {
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
-      <LanguageSwitcher language={language} setLanguage={setLanguage} disabled={status === 'analyzing'} />
+      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing'} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <Card className="glass-card">
@@ -184,7 +193,7 @@ export default function CropScannerPage() {
 
             {imagePreview && (
               <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={handleScan} disabled={status === 'analyzing' || !user || cooldown > 0} className="w-full">
+                 <Button onClick={() => handleScan()} disabled={status === 'analyzing' || !user || cooldown > 0} className="w-full">
                     {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
                      cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
@@ -222,7 +231,7 @@ export default function CropScannerPage() {
                         <AlertTriangle className="mx-auto h-12 w-12 mb-4" />
                         <h3 className="font-semibold mb-2">Analysis Failed</h3>
                         <p className="text-sm mb-4">{error}</p>
-                        <Button onClick={handleScan} variant="secondary">
+                        <Button onClick={() => handleScan()} variant="secondary">
                            <RefreshCw className="mr-2"/> Try Again
                         </Button>
                     </div>
