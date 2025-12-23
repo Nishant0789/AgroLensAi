@@ -43,7 +43,7 @@ export default function HomePage() {
   }, [user, loading, router]);
 
 
-  if (loading) {
+  if (loading || user) {
     return (
      <div className="flex h-screen items-center justify-center bg-background/0">
        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
