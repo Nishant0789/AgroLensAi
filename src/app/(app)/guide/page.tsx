@@ -154,7 +154,6 @@ export default function GuidePage() {
     } else {
         // In this version, we don't regenerate roadmaps on the fly to save API calls.
         // We just show the pre-generated one for the top crop.
-        // A more advanced version might generate a new roadmap here.
         alert("Detailed roadmap is shown for the top recommended crop. Other roadmaps can be generated in a future version.");
         setSelectedRoadmap(guideData.roadmap);
     }

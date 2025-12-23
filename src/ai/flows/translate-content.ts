@@ -4,21 +4,10 @@
  * @fileOverview Translates structured JSON content from one language to another.
  *
  * - translateContent - A function that handles the translation.
- * - TranslateContentInput - The input type for the function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-
-export const TranslateContentInputSchema = z.object({
-  content: z.any().describe('The JSON object with text fields to be translated.'),
-  targetLanguage: z.string().describe('The target language (e.g., "English", "Hindi").'),
-});
-export type TranslateContentInput = z.infer<typeof TranslateContentInputSchema>;
-
-export const TranslateContentOutputSchema = z.any();
-export type TranslateContentOutput = z.infer<typeof TranslateContentOutputSchema>;
-
+import { TranslateContentInputSchema, TranslateContentOutputSchema, type TranslateContentInput, type TranslateContentOutput } from './translate-content-types';
 
 export async function translateContent(input: TranslateContentInput): Promise<TranslateContentOutput> {
   return translateContentFlow(input);
