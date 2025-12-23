@@ -4,9 +4,8 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { mockScanHistory } from '@/lib/mock-data';
 import Image from 'next/image';
-import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check } from 'lucide-react';
+import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocation } from '@/lib/location';
 import { useEffect, useState } from 'react';
@@ -14,6 +13,9 @@ import { getWeatherForecast, WeatherDataPoint } from '@/ai/flows/get-weather-for
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/lib/auth.tsx';
+import { useCollection } from '@/firebase';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 
 const weatherIconMap: { [key: string]: React.ElementType } = {
     sun: Sun,
@@ -181,52 +183,90 @@ function WeatherCard() {
   );
 }
 
+type Scan = {
+    id: string;
+    imageUrl: string;
+    createdAt: { seconds: number; nanoseconds: number };
+    disease: string;
+};
+
 function FieldJournal() {
+  const { user } = useAuth();
+  const scansQuery = user 
+    ? query(
+        collection(user.firestore, `users/${user.uid}/scans`), 
+        orderBy('createdAt', 'desc'), 
+        limit(5)
+      ) 
+    : null;
+  const { data: scans, loading } = useCollection<Scan>(scansQuery);
+
+  const formatDate = (timestamp: { seconds: number; nanoseconds: number; }) => {
+    if (!timestamp) return 'N/A';
+    return new Date(timestamp.seconds * 1000).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
     <Card className="glass-card mt-6">
       <CardHeader>
-        <CardTitle>Field Journal (Scan History)</CardTitle>
+        <CardTitle>Field Journal (Recent Scans)</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Image</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Diagnosis</TableHead>
-              <TableHead>Confidence</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {mockScanHistory.map((scan) => (
-              <motion.tr
-                key={scan.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="hover:bg-accent/20"
-              >
-                <TableCell>
-                  <Image
-                    src={scan.imageUrl}
-                    alt="Scan of crop"
-                    width={60}
-                    height={40}
-                    className="rounded-md object-cover"
-                    data-ai-hint={scan.imageHint}
-                  />
-                </TableCell>
-                <TableCell>{scan.date}</TableCell>
-                <TableCell>
-                  <Badge variant={scan.disease === 'Healthy' ? 'secondary' : 'destructive'}>
-                    {scan.disease}
-                  </Badge>
-                </TableCell>
-                <TableCell>{scan.confidence}%</TableCell>
-              </motion.tr>
-            ))}
-          </TableBody>
-        </Table>
+        {loading && (
+             <div className="flex flex-col items-center justify-center h-40 gap-2">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-muted-foreground">Loading journal...</p>
+            </div>
+        )}
+        {!loading && (!scans || scans.length === 0) && (
+            <div className="flex flex-col items-center justify-center h-40 gap-2 text-center">
+                 <Leaf className="w-8 h-8 text-muted-foreground" />
+                 <p className="text-muted-foreground max-w-sm">You haven't scanned any crops yet. Use the Crop Scanner to get started!</p>
+            </div>
+        )}
+        {!loading && scans && scans.length > 0 && (
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Image</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Diagnosis</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {scans.map((scan) => (
+                <motion.tr
+                    key={scan.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="hover:bg-accent/20"
+                >
+                    <TableCell>
+                    <Image
+                        src={scan.imageUrl}
+                        alt="Scan of crop"
+                        width={60}
+                        height={40}
+                        className="rounded-md object-cover"
+                        data-ai-hint="crop leaf"
+                    />
+                    </TableCell>
+                    <TableCell>{formatDate(scan.createdAt)}</TableCell>
+                    <TableCell>
+                    <Badge variant={scan.disease.toLowerCase() === 'healthy' ? 'secondary' : 'destructive'}>
+                        {scan.disease}
+                    </Badge>
+                    </TableCell>
+                </motion.tr>
+                ))}
+            </TableBody>
+            </Table>
+        )}
       </CardContent>
     </Card>
   );

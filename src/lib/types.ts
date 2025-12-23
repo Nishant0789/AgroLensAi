@@ -1,28 +1,4 @@
-export type Scan = {
-  id: string;
-  imageUrl: string;
-  imageHint: string;
-  date: string;
-  disease: string;
-  confidence: number;
-  solution: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-};
 
-export type Alert = {
-  id: string;
-  disease: string;
-  location: string;
-  distance: number;
-  date: string;
-};
-
-export type WeatherData = {
-  day: string;
-  temp: number;
-  icon: 'sun' | 'cloud' | 'rain' | 'snow' | 'wind' | 'cloud-sun' | 'sunny' | 'partly-cloudy' | 'cloudy' | 'showers';
-  description: string;
-};
+// This file is no longer needed as data types are inferred from Firestore.
+// It is kept to prevent breaking imports, but can be removed in a future cleanup.
+export {};

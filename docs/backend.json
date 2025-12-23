@@ -95,6 +95,35 @@
         }
       },
       "required": ["alertId", "disease", "distance", "preventiveMeasures", "timestamp"]
+    },
+    "Scan": {
+      "title": "Crop Scan",
+      "description": "Represents a single crop scan performed by a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who performed the scan."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "A data URI of the scanned image."
+        },
+        "disease": {
+          "type": "string",
+          "description": "The diagnosed disease."
+        },
+        "solution": {
+          "type": "string",
+          "description": "The suggested solution."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of when the scan was created."
+        }
+      },
+      "required": ["userId", "imageUrl", "disease", "solution", "createdAt"]
     }
   },
   "auth": {
@@ -118,6 +147,12 @@
         "$ref": "#/entities/UserNotification"
       },
       "description": "Stores personalized notifications for each user."
+    },
+    "/users/{userId}/scans/{scanId}": {
+      "schema": {
+        "$ref": "#/entities/Scan"
+      },
+      "description": "Stores a user's crop scan history."
     }
   }
 }

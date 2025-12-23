@@ -31,5 +31,12 @@ service cloud.firestore {
     match /users/{userId}/notifications/{notificationId} {
       allow read, write, create, delete: if isAuthenticated() && isOwner(userId);
     }
+
+    // Users can manage their own scan history
+    match /users/{userId}/scans/{scanId} {
+      allow read, create, delete: if isAuthenticated() && isOwner(userId);
+      // Scans are immutable once created
+      allow update: if false;
+    }
   }
 }

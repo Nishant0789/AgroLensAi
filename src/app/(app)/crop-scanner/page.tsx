@@ -12,6 +12,7 @@ import analyzingAnimation from '../../../../public/lottie/analyzing.json';
 import { alertNearbyDiseases } from '@/ai/flows/geo-location-alerts';
 import { analyzeCrop } from '@/ai/ai-crop-scanner';
 import { useAuth } from '@/lib/auth.tsx';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 type ScanResult = {
   disease: string;
@@ -71,6 +72,21 @@ export default function CropScannerPage() {
 
       setResult(scanResult);
       setStatus('success');
+
+      // Save scan to Firestore
+      try {
+        const scansCollection = collection(user.firestore, `users/${user.uid}/scans`);
+        await addDoc(scansCollection, {
+          userId: user.uid,
+          imageUrl: imagePreview, // Storing data URI, for a real app, use Firebase Storage
+          disease: scanResult.disease,
+          solution: scanResult.solution,
+          createdAt: serverTimestamp(),
+        });
+      } catch (e) {
+          console.error("Failed to save scan history:", e);
+          // Non-critical error, so we don't show a toast to the user
+      }
       
       // Trigger geo-location alert in the background
       // Only send alert if a disease was detected
