@@ -26,6 +26,7 @@ export default function GuidePage() {
   
   const [guideData, setGuideData] = useState<PersonalizedGuideOutput | null>(null);
   const [selectedCrop, setSelectedCrop] = useState<CropSuggestion | null>(null);
+  const [selectedRoadmap, setSelectedRoadmap] = useState<GrowthRoadmap | null>(null);
 
   const [cooldown, setCooldown] = useState(0);
 
@@ -45,6 +46,8 @@ export default function GuidePage() {
     setLoading(true);
     setError(null);
     setGuideData(null);
+    setSelectedCrop(null);
+    setSelectedRoadmap(null);
     setCooldown(10); // 10 second cooldown
     
     try {
@@ -55,6 +58,7 @@ export default function GuidePage() {
         const roadmapCropName = result.roadmap.title.split(" for ")[1]?.split(" in ")[0];
         const topCrop = result.suggestions.find(s => s.name === roadmapCropName) || result.suggestions[0];
         setSelectedCrop(topCrop);
+        setSelectedRoadmap(result.roadmap);
       }
     } catch (err) {
       console.error(err);
@@ -70,11 +74,41 @@ export default function GuidePage() {
     }
   }, [location]);
 
+  const handleSelectCrop = async (crop: CropSuggestion) => {
+    if (!guideData) return;
+    
+    // If the roadmap for this crop is already generated, just show it
+    if(guideData.roadmap.title.includes(crop.name)) {
+        setSelectedCrop(crop);
+        setSelectedRoadmap(guideData.roadmap);
+        setCurrentStep(2);
+        return;
+    }
+
+    // This part is a placeholder for generating a new roadmap on demand.
+    // For this app, we'll just switch to the pre-generated one.
+    // In a real app, you would make another AI call here.
+    setSelectedCrop(crop);
+    
+    // For demonstration, we'll just use the existing roadmap and change the title
+    const newRoadmap = {
+        ...guideData.roadmap,
+        title: `Growth Roadmap for ${crop.name} in ${location?.name}`
+    }
+    setSelectedRoadmap(newRoadmap);
+    setCurrentStep(2);
+  }
 
   const handleStartOver = () => {
     setCurrentStep(1);
+    // Don't null out the data, so the user can go back and forth
+  }
+  
+  const handleRegenerate = () => {
+    setCurrentStep(1);
     setSelectedCrop(null);
     setGuideData(null);
+    setSelectedRoadmap(null);
     setError(null);
     if (location) {
         fetchGuide();
@@ -189,13 +223,11 @@ export default function GuidePage() {
                               <CardContent className="flex-1">
                                   <p className="text-sm text-muted-foreground">{crop.reason}</p>
                               </CardContent>
-                              {selectedCrop?.name === crop.name && (
-                                <div className="p-4 pt-0">
-                                <Button onClick={() => setCurrentStep(2)} className="w-full">
+                              <CardFooter>
+                                <Button onClick={() => handleSelectCrop(crop)} className="w-full">
                                     <Wheat className="mr-2" /> View Growth Roadmap
                                 </Button>
-                                </div>
-                              )}
+                              </CardFooter>
                           </Card>
                       </motion.div>
                     ))}
@@ -205,17 +237,17 @@ export default function GuidePage() {
             </Card>
           )}
           
-          {currentStep === 2 && guideData && selectedCrop && (
+          {currentStep === 2 && selectedRoadmap && selectedCrop && (
             <div>
                  <>
                     <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold font-headline">{guideData.roadmap.title}</h2>
+                        <h2 className="text-2xl font-bold font-headline">{selectedRoadmap.title}</h2>
                         <p className="text-muted-foreground">A step-by-step guide for growing <span className="font-semibold text-primary">{selectedCrop.name}</span> in <span className="font-semibold text-primary">{location?.name}</span>.</p>
                     </div>
 
                     <div className="relative">
                         <div className="absolute left-4 top-4 h-full border-l-2 border-border border-dashed"></div>
-                        {guideData.roadmap.roadmap.map((item, index) => (
+                        {selectedRoadmap.roadmap.map((item, index) => (
                         <motion.div 
                             key={index} 
                             className="relative pl-10 mb-8"
@@ -241,9 +273,14 @@ export default function GuidePage() {
                         </motion.div>
                         ))}
                     </div>
-                    <Button onClick={handleStartOver} variant="outline" className="mt-6 w-full" disabled={cooldown > 0}>
-                        {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2" /> Start Over & Regenerate</>}
-                    </Button>
+                     <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                        <Button onClick={handleStartOver} variant="outline" className="w-full">
+                            <Wheat className="mr-2" /> Back to Crop Selection
+                        </Button>
+                        <Button onClick={handleRegenerate} variant="secondary" className="w-full" disabled={cooldown > 0}>
+                            {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2" /> Regenerate Suggestions</>}
+                        </Button>
+                    </div>
                 </>
             </div>
           )}
