@@ -10,6 +10,15 @@ import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, Aler
 import { Button } from '@/components/ui/button';
 import { useLocation } from '@/lib/location';
 
+const weatherIconMap = {
+    sun: Sun,
+    cloud: Cloud,
+    rain: CloudRain,
+    snow: Snowflake,
+    wind: Wind,
+    'cloud-sun': CloudSun,
+};
+
 function WeatherCard() {
   const { location, loading, error, fetchLocation } = useLocation();
 
