@@ -16,6 +16,7 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { translateContent } from '@/ai/flows/translate-content';
+import { type TranslateContentInput } from '@/ai/flows/translate-content-types';
 
 type ScanResult = AnalyzeCropOutput;
 
@@ -71,17 +72,29 @@ export default function CropScannerPage() {
     setError(null);
     setResult(null);
     setOriginalResult(null);
-    setLanguage('English'); // Default to English for new scans
     setCooldown(10); // Start 10-second cooldown
     
     try {
+      // Always get original analysis in English for consistent translation base
       const analysisResult = await analyzeCrop({
         photoDataUri: imagePreview,
-        language: 'English', // Always get original analysis in English
+        language: 'English',
       });
       
-      setResult(analysisResult);
       setOriginalResult(analysisResult); // Save the original English result
+
+      if (language === 'English') {
+        setResult(analysisResult);
+      } else {
+        // If the current language is not English, translate the result immediately
+        setStatus('translating');
+        const translatedResult = await translateContent({
+            content: analysisResult,
+            targetLanguage: language,
+        } as TranslateContentInput);
+        setResult(translatedResult);
+      }
+      
       setStatus('success');
 
       // Save scan to Firestore
@@ -147,7 +160,7 @@ export default function CropScannerPage() {
         const translatedResult = await translateContent({
             content: originalResult,
             targetLanguage: lang,
-        });
+        } as TranslateContentInput);
         setResult(translatedResult);
     } catch(err) {
         console.error("Error translating content:", err);
@@ -181,7 +194,7 @@ export default function CropScannerPage() {
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
-      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating' || !result} />
+      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating' || status === 'error'} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <Card className="glass-card">

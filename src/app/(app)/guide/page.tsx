@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useLocation } from '@/lib/location';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { translateContent } from '@/ai/flows/translate-content';
+import { type TranslateContentInput } from '@/ai/flows/translate-content-types';
 
 
 type CropSuggestion = PersonalizedGuideOutput['suggestions'][0];
@@ -67,19 +68,29 @@ export default function GuidePage() {
     setSelectedCrop(null);
     setSelectedRoadmap(null);
     setCurrentStep(1);
-    setLanguage('English');
     setCooldown(10); // 10 second cooldown
     
     try {
       const result = await generatePersonalizedGuide({ location: location.name, language: 'English' });
-      setGuideData(result);
       setOriginalGuideData(result);
 
+      if (language === 'English') {
+        setGuideData(result);
+      } else {
+        const translatedResult = await translateContent({
+            content: result,
+            targetLanguage: language,
+        } as TranslateContentInput);
+        setGuideData(translatedResult);
+      }
+
       if (result.suggestions.length > 0) {
+        const currentData = (language === 'English' ? result : guideData) || result;
         const roadmapCropName = result.roadmap.title.split(" for ")[1]?.split(" in ")[0];
-        const topCrop = result.suggestions.find(s => s.name === roadmapCropName) || result.suggestions[0];
+        const topCrop = currentData.suggestions.find((s: any, i: number) => result.suggestions[i].name === roadmapCropName) || currentData.suggestions[0];
+        
         setSelectedCrop(topCrop);
-        setSelectedRoadmap(result.roadmap);
+        setSelectedRoadmap(currentData.roadmap);
       }
     } catch (err) {
       console.error(err);
@@ -91,8 +102,12 @@ export default function GuidePage() {
 
   const handleLanguageChange = async (lang: string) => {
     setLanguage(lang);
-    if (!originalGuideData) return;
+    if (!originalGuideData) {
+        if(location) fetchGuide();
+        return;
+    };
     
+    setLoading(true);
     if (lang === 'English') {
         setGuideData(originalGuideData);
         // Also update selected crop and roadmap to english versions
@@ -102,24 +117,22 @@ export default function GuidePage() {
             setSelectedCrop(topCrop);
             setSelectedRoadmap(originalGuideData.roadmap);
         }
+        setLoading(false);
         return;
     }
 
-    setLoading(true);
     try {
         const translatedResult = await translateContent({
             content: originalGuideData,
             targetLanguage: lang
-        });
+        } as TranslateContentInput);
         setGuideData(translatedResult);
+
+        // find which crop was selected based on index
+        const originalIndex = originalGuideData.suggestions.findIndex(s => s.name === selectedCrop?.name || s.name === originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0]);
+
         if (translatedResult.suggestions.length > 0) {
-          const originalRoadmapCropName = originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0];
-          const originalTopCrop = originalGuideData.suggestions.find(s => s.name === originalRoadmapCropName) || originalGuideData.suggestions[0];
-          
-          // find the translated crop that corresponds to the original selected crop
-          const originalIndex = originalGuideData.suggestions.findIndex(s => s.name === selectedCrop?.name);
           const translatedTopCrop = translatedResult.suggestions[originalIndex] || translatedResult.suggestions[0];
-          
           setSelectedCrop(translatedTopCrop);
           setSelectedRoadmap(translatedResult.roadmap);
         }
@@ -133,11 +146,11 @@ export default function GuidePage() {
   }
   
   useEffect(() => {
-    if (location && !guideData && !loading) {
+    if (location && !guideData && !loading && !error) {
       fetchGuide();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, guideData, loading]);
+  }, [location]);
 
   const handleSelectCrop = (crop: CropSuggestion) => {
     if (!guideData || !originalGuideData) return;
@@ -256,7 +269,7 @@ export default function GuidePage() {
                 {location && !locationLoading && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
               </CardHeader>
               <CardContent className="p-6">
-                <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={loading || locationLoading || !guideData} />
+                <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={loading || locationLoading} />
                 {(locationLoading || (loading && !guideData)) && <LoadingIndicator />}
                 
                 {!locationLoading && locationError && <ErrorDisplay error={locationError} onRetry={fetchLocation} />}
