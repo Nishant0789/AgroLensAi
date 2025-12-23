@@ -33,7 +33,7 @@ export default function AuthPage() {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
       
-      <div className="absolute inset-0 bg-background/50 backdrop-blur-2xl" />
+      <div className="absolute inset-0 bg-background/50 backdrop-blur-sm" />
       <div className="relative z-10 w-full p-4">
         <div className="absolute top-8 left-1/2 -translate-x-1/2">
           <Logo />
