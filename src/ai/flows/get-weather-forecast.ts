@@ -130,7 +130,7 @@ const prompt = ai.definePrompt({
     system: "You are a weather assistant. Use the provided tool to get the 7-day forecast for the given location and return it to the user in the specified format.",
     tools: [getWeatherTool],
     output: { schema: GetWeatherForecastOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-pro',
 });
 
 const getWeatherForecastFlow = ai.defineFlow(
@@ -196,7 +196,7 @@ const geocodePrompt = ai.definePrompt({
     system: "Use the geocode tool to find the coordinates for the given city.",
     tools: [geocodeTool],
     output: { schema: GeocodeOutputSchema },
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-pro',
 });
 
 
