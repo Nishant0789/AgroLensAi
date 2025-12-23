@@ -98,18 +98,20 @@ const geocodeTool = ai.defineTool({
   outputSchema: GeocodeOutputSchema,
 }, async ({ city }) => {
   console.log(`Geocoding (mock) for: ${city}`);
+  const cityLower = city.toLowerCase();
+
   // Simple mock. A real implementation would call a geocoding API.
-  // Returning slightly randomized coordinates to simulate different cities.
-  if (city.toLowerCase().includes('gorakhpur')) {
-      return { latitude: 26.7606, longitude: 83.3732, city: 'Gorakhpur', country: 'India', name: 'Gorakhpur, India' };
+  if (cityLower.includes('bhatni')) {
+    return { latitude: 26.3833, longitude: 83.9333, city: 'Bhatni', country: 'India', name: 'Bhatni, Uttar Pradesh' };
   }
-  return {
-    latitude: 37.7749 + (Math.random() - 0.5),
-    longitude: -122.4194 + (Math.random() - 0.5),
-    city: city,
-    country: 'USA',
-    name: `${city}, USA`,
-  };
+  if (cityLower.includes('delhi')) {
+      return { latitude: 28.7041, longitude: 77.1025, city: 'Delhi', country: 'India', name: 'Delhi, India' };
+  }
+  if (cityLower.includes('mumbai')) {
+      return { latitude: 19.0760, longitude: 72.8777, city: 'Mumbai', country: 'India', name: 'Mumbai, India' };
+  }
+  // Default to Gorakhpur if not found
+  return { latitude: 26.7606, longitude: 83.3732, city: 'Gorakhpur', country: 'India', name: 'Gorakhpur, India' };
 });
 
 
