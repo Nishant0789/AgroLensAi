@@ -128,7 +128,7 @@ const generateGrowthRoadmapFlow = ai.defineFlow(
     inputSchema: GrowthRoadmapInputSchema,
     outputSchema: GrowthRoadmapOutputSchema,
   },
-  async input => {
+async input => {
     const {output} = await generateRoadmapPrompt(input);
     return output!;
   }
