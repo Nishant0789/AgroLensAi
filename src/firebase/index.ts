@@ -1,7 +1,7 @@
 'use client';
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { firebaseConfig } from './config';
 import {
   useCollection,
@@ -30,6 +30,14 @@ function initializeFirebase() {
     }
     auth = getAuth(firebaseApp);
     firestore = getFirestore(firebaseApp);
+
+    try {
+      enableIndexedDbPersistence(firestore);
+    } catch (error: any) {
+      if (error.code !== 'failed-precondition') {
+        console.error("Firebase persistence error:", error);
+      }
+    }
   }
   // On the server, we'll return undefined and let the client-side provider handle it.
   // This is a temporary state until the client hydrates.
