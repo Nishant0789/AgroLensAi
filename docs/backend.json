@@ -23,16 +23,24 @@
           "description": "URL of the user's profile picture."
         },
         "latitude": {
-            "type": "number",
-            "description": "The user's last known latitude."
+          "type": "number",
+          "description": "The user's last known latitude."
         },
         "longitude": {
-            "type": "number",
-            "description": "The user's last known longitude."
+          "type": "number",
+          "description": "The user's last known longitude."
+        },
+        "city": {
+            "type": "string",
+            "description": "The user's city."
+        },
+        "country": {
+            "type": "string",
+            "description": "The user's country."
         },
         "currentCrop": {
-            "type": "string",
-            "description": "The crop the user is currently growing."
+          "type": "string",
+          "description": "The crop the user is currently growing."
         }
       },
       "required": ["uid", "email"]
@@ -56,24 +64,37 @@
           "format": "date-time"
         },
         "sourceUserId": {
-            "type": "string"
+          "type": "string"
         }
       },
       "required": ["disease", "latitude", "longitude", "timestamp"]
     },
     "UserNotification": {
-        "title": "User Notification",
-        "description": "A notification for a specific user about a nearby disease alert.",
-        "type": "object",
-        "properties": {
-            "alertId": { "type": "string" },
-            "disease": { "type": "string" },
-            "distance": { "type": "number" },
-            "preventiveMeasures": { "type": "string" },
-            "timestamp": { "type": "string", "format": "date-time" },
-            "read": { "type": "boolean" }
+      "title": "User Notification",
+      "description": "A notification for a specific user about a nearby disease alert.",
+      "type": "object",
+      "properties": {
+        "alertId": {
+          "type": "string"
         },
-        "required": ["alertId", "disease", "distance", "preventiveMeasures", "timestamp"]
+        "disease": {
+          "type": "string"
+        },
+        "distance": {
+          "type": "number"
+        },
+        "preventiveMeasures": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "read": {
+          "type": "boolean"
+        }
+      },
+      "required": ["alertId", "disease", "distance", "preventiveMeasures", "timestamp"]
     }
   },
   "auth": {
@@ -81,16 +102,22 @@
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": { "$ref": "#/entities/UserProfile" },
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
       "description": "Stores public profile information for each user."
     },
     "/alerts/{alertId}": {
-        "schema": { "$ref": "#/entities/DiseaseAlert" },
-        "description": "Stores records of detected disease outbreaks."
+      "schema": {
+        "$ref": "#/entities/DiseaseAlert"
+      },
+      "description": "Stores records of detected disease outbreaks."
     },
     "/users/{userId}/notifications/{notificationId}": {
-        "schema": { "$ref": "#/entities/UserNotification" },
-        "description": "Stores personalized notifications for each user."
+      "schema": {
+        "$ref": "#/entities/UserNotification"
+      },
+      "description": "Stores personalized notifications for each user."
     }
   }
 }
