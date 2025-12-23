@@ -12,15 +12,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { LocationProvider } from '@/lib/location';
 import { useCollection, useUser, useFirestore } from '@/firebase';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { collection, query, where, limit, getAuth } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
-
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/crop-scanner', label: 'Crop Scanner', icon: Shrub },
-  { href: '/guide', label: 'Growth Guide', icon: BookOpen },
-  { href: '/alerts', label: 'Alerts', icon: Bell },
-];
+import { initializeFirebase } from '@/firebase';
 
 function UnreadAlertsBadge() {
   const { user } = useUser();
@@ -69,14 +63,13 @@ export default function AppLayout({
     );
   }
 
-  // The signOut function can be defined here or imported from a context if needed elsewhere.
   const signOut = async () => {
     try {
-      // Assuming you have access to the auth instance
-      const { getAuth } = await import('firebase/auth');
-      const { firebaseApp } = await import('@/firebase').then(m => m.initializeFirebase());
-      await getAuth(firebaseApp).signOut();
-      router.push('/auth');
+      const { auth } = initializeFirebase();
+      if (auth) {
+        await auth.signOut();
+        router.push('/auth');
+      }
     } catch (error) {
       console.error("Error signing out: ", error);
     }
@@ -158,3 +151,10 @@ export default function AppLayout({
       </LocationProvider>
   );
 }
+
+const navItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/crop-scanner', label: 'Crop Scanner', icon: Shrub },
+  { href: '/guide', label: 'Growth Guide', icon: BookOpen },
+  { href: '/alerts', label: 'Alerts', icon: Bell },
+];
