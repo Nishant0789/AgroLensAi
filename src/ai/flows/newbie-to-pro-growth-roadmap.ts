@@ -17,6 +17,9 @@ const PersonalizedGuideInputSchema = z.object({
   location: z
     .string()
     .describe('The geographical location of the farm (e.g., city, state).'),
+  language: z
+    .string()
+    .describe('The language for the output (e.g., "English", "Hindi").'),
 });
 export type PersonalizedGuideInput = z.infer<typeof PersonalizedGuideInputSchema>;
 
@@ -59,7 +62,7 @@ const personalizedGuidePrompt = ai.definePrompt({
     name: 'personalizedGuidePrompt',
     input: { schema: PersonalizedGuideInputSchema },
     output: { schema: PersonalizedGuideOutputSchema },
-    prompt: `You are an expert agricultural advisor. A new farmer in {{location}} needs guidance.
+    prompt: `You are an expert agricultural advisor. A new farmer in {{location}} needs guidance. Your response must be in {{language}}.
 
     Your task is two-fold:
     1.  Suggest 3-4 profitable and feasible crops for a new farmer in this location. For each crop, provide its name, a brief reason for its suitability (climate, demand), and a predicted profitability rating (High, Medium, or Low).
@@ -75,7 +78,7 @@ const personalizedGuidePrompt = ai.definePrompt({
     - Harvesting
     - Post-Harvest Handling
 
-    Provide the final output in the specified JSON format, containing both the list of suggestions and the detailed roadmap for the top choice.
+    Provide the final output in the specified JSON format, with all text in {{language}}, containing both the list of suggestions and the detailed roadmap for the top choice.
     `,
     model: 'googleai/gemini-2.5-flash-lite',
 });

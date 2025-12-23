@@ -19,13 +19,17 @@ const AnalyzeCropInputSchema = z.object({
     ),
   language: z
     .string()
-    .describe('The language in which the solution should be provided.'),
+    .describe('The language in which the solution should be provided (e.g., "English", "Hindi").'),
 });
 export type AnalyzeCropInput = z.infer<typeof AnalyzeCropInputSchema>;
 
 const AnalyzeCropOutputSchema = z.object({
-  disease: z.string().describe('The identified disease of the crop.'),
-  solution: z.string().describe('The suggested solution for the disease.'),
+  disease: z.string().describe('The identified disease of the crop. If healthy, respond "Healthy".'),
+  description: z.string().describe('A general overview of the disease.'),
+  symptoms: z.array(z.string()).describe('A list of key symptoms to look for.'),
+  organicSolution: z.string().describe('Detailed step-by-step organic or natural solutions to manage the disease.'),
+  chemicalSolution: z.string().describe('Detailed step-by-step chemical-based solutions to manage the disease.'),
+  prevention: z.array(z.string()).describe('A list of actionable steps to prevent this disease in the future.'),
 });
 export type AnalyzeCropOutput = z.infer<typeof AnalyzeCropOutputSchema>;
 
@@ -37,12 +41,19 @@ const prompt = ai.definePrompt({
   name: 'analyzeCropPrompt',
   input: {schema: AnalyzeCropInputSchema},
   output: {schema: AnalyzeCropOutputSchema},
-  prompt: `You are an expert in identifying crop diseases and suggesting solutions.
-
-  Analyze the following crop image and identify any potential diseases. Provide a solution in the specified language.
+  prompt: `You are an expert agricultural pathologist. Analyze the following crop image and provide a detailed diagnosis and treatment plan in the specified language.
 
   Language: {{{language}}}
   Photo: {{media url=photoDataUri}}
+  
+  Your response must be structured and detailed. If the crop appears healthy, set the disease field to "Healthy" and briefly explain why in the description, leaving other fields empty or with positive affirmations.
+  Otherwise, provide the following:
+  - disease: The common name of the disease.
+  - description: A brief overview of what the disease is and how it affects the crop.
+  - symptoms: A bulleted list of the primary symptoms.
+  - organicSolution: A detailed, step-by-step guide for an organic solution.
+  - chemicalSolution: A detailed, step-by-step guide for a chemical solution, including warnings.
+  - prevention: A bulleted list of long-term preventive measures.
   `,
   model: 'googleai/gemini-2.5-flash-lite',
 });

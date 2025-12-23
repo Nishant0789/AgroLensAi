@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { generatePersonalizedGuide, type PersonalizedGuideOutput } from '@/ai/flows/newbie-to-pro-growth-roadmap';
-import { Check, Loader, MapPin, Wheat, RefreshCw, DollarSign, Sparkles, Clock, Satellite, BrainCircuit, AlertTriangle } from 'lucide-react';
+import { Check, Loader, Wheat, RefreshCw, DollarSign, Sparkles, Clock, AlertTriangle, Languages } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useLocation } from '@/lib/location';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 type CropSuggestion = PersonalizedGuideOutput['suggestions'][0];
 type GrowthRoadmap = PersonalizedGuideOutput['roadmap'];
@@ -16,6 +18,18 @@ const steps = [
   { id: 1, name: 'Crop Selection' },
   { id: 2, name: 'Growth Roadmap' },
 ];
+
+const LanguageSwitcher = ({ language, setLanguage, disabled }: { language: string; setLanguage: (lang: string) => void; disabled: boolean }) => (
+    <div className="flex items-center justify-center gap-2 my-4">
+        <Languages className="text-muted-foreground"/>
+        <Tabs defaultValue={language} onValueChange={setLanguage} className="w-[150px]">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="English" disabled={disabled}>English</TabsTrigger>
+                <TabsTrigger value="Hindi" disabled={disabled}>हिंदी</TabsTrigger>
+            </TabsList>
+        </Tabs>
+    </div>
+);
 
 export default function GuidePage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -27,6 +41,7 @@ export default function GuidePage() {
   const [guideData, setGuideData] = useState<PersonalizedGuideOutput | null>(null);
   const [selectedCrop, setSelectedCrop] = useState<CropSuggestion | null>(null);
   const [selectedRoadmap, setSelectedRoadmap] = useState<GrowthRoadmap | null>(null);
+  const [language, setLanguage] = useState('English');
 
   const [cooldown, setCooldown] = useState(0);
 
@@ -40,7 +55,7 @@ export default function GuidePage() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  const fetchGuide = async () => {
+  const fetchGuide = async (lang = language) => {
     if (!location?.name || cooldown > 0) return;
 
     setLoading(true);
@@ -51,7 +66,7 @@ export default function GuidePage() {
     setCooldown(10); // 10 second cooldown
     
     try {
-      const result = await generatePersonalizedGuide({ location: location.name });
+      const result = await generatePersonalizedGuide({ location: location.name, language: lang });
       setGuideData(result);
       if (result.suggestions.length > 0) {
         // Find the crop from suggestions that matches the roadmap title crop
@@ -67,26 +82,40 @@ export default function GuidePage() {
       setLoading(false);
     }
   };
+
+  const handleLanguageChange = (lang: string) => {
+    setLanguage(lang);
+    if(location){
+      fetchGuide(lang);
+    }
+  }
   
   useEffect(() => {
     if (location) {
       fetchGuide();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 
   const handleSelectCrop = async (crop: CropSuggestion) => {
-    if (!guideData) return;
+    if (!guideData || !location) return;
     
-    // In a real app, you might generate a new roadmap here if it's not the default one.
-    // For this demo, we assume the AI provides roadmaps for all suggestions or we reuse the main one.
     setSelectedCrop(crop);
     
-    // For demonstration, we'll just use the existing roadmap and change the title
-    const newRoadmap = {
-        ...guideData.roadmap,
-        title: `Growth Roadmap for ${crop.name} in ${location?.name}`
+    setLoading(true);
+    try {
+        const result = await generatePersonalizedGuide({ location: location.name, language: language });
+        const newRoadmap = {
+            ...result.roadmap,
+            title: `Growth Roadmap for ${crop.name} in ${location?.name}`
+        }
+        setSelectedRoadmap(newRoadmap);
+    } catch (err) {
+        setError('Could not generate the roadmap for this crop.');
+    } finally {
+        setLoading(false);
     }
-    setSelectedRoadmap(newRoadmap);
+
     setCurrentStep(2);
   }
 
@@ -193,7 +222,8 @@ export default function GuidePage() {
                 {location && !locationLoading && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
               </CardHeader>
               <CardContent className="p-6">
-                {(locationLoading || loading) && <LoadingIndicator />}
+                <LanguageSwitcher language={language} setLanguage={handleLanguageChange} disabled={loading || locationLoading} />
+                {(locationLoading || (loading && !guideData)) && <LoadingIndicator />}
                 
                 {!locationLoading && locationError && <ErrorDisplay error={locationError} onRetry={fetchLocation} />}
 
@@ -232,48 +262,56 @@ export default function GuidePage() {
             </Card>
           )}
           
-          {currentStep === 2 && selectedRoadmap && selectedCrop && (
+          {currentStep === 2 && (
             <div>
                  <Card className="glass-card mb-8">
                     <CardContent className="p-6 text-center">
-                        <h2 className="text-3xl font-bold font-headline">{selectedRoadmap.title}</h2>
-                        <p className="text-muted-foreground">A step-by-step guide for growing <span className="font-semibold text-primary">{selectedCrop.name}</span> in <span className="font-semibold text-primary">{location?.name}</span>.</p>
+                        {loading && <LoadingIndicator text="Generating roadmap..."/>}
+                        {error && !loading && <ErrorDisplay error={error} onRetry={() => selectedCrop && handleSelectCrop(selectedCrop)}/>}
+                        {selectedRoadmap && selectedCrop && !loading && (
+                            <>
+                                <h2 className="text-3xl font-bold font-headline">{selectedRoadmap.title}</h2>
+                                <p className="text-muted-foreground">A step-by-step guide for growing <span className="font-semibold text-primary">{selectedCrop.name}</span> in <span className="font-semibold text-primary">{location?.name}</span>.</p>
+                            </>
+                        )}
                     </CardContent>
                  </Card>
 
-                    <div className="relative">
-                        <div className="absolute left-4 top-4 h-full border-l-2 border-border border-dashed"></div>
-                        {selectedRoadmap.roadmap.map((item, index) => (
-                        <motion.div 
-                            key={index} 
-                            className="relative pl-10 mb-8"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                        >
-                            <div className="absolute left-0 top-3 flex items-center justify-center w-8 h-8 bg-primary rounded-full text-primary-foreground font-bold">
-                            {index + 1}
-                            </div>
-                            <Card className="ml-4 glass-card shadow-md">
-                            <CardHeader>
-                                <CardTitle>{item.title}</CardTitle>
-                                <CardDescription className="flex items-center gap-2 pt-1">
-                                <Clock className="h-4 w-4" />
-                                <span>{item.duration}</span>
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="whitespace-pre-line text-sm text-muted-foreground">{item.description}</p>
-                            </CardContent>
-                            </Card>
-                        </motion.div>
-                        ))}
-                    </div>
+                    {selectedRoadmap && !loading && (
+                        <div className="relative">
+                            <div className="absolute left-4 top-4 h-full border-l-2 border-border border-dashed"></div>
+                            {selectedRoadmap.roadmap.map((item, index) => (
+                            <motion.div 
+                                key={index} 
+                                className="relative pl-10 mb-8"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                            >
+                                <div className="absolute left-0 top-3 flex items-center justify-center w-8 h-8 bg-primary rounded-full text-primary-foreground font-bold">
+                                {index + 1}
+                                </div>
+                                <Card className="ml-4 glass-card shadow-md">
+                                <CardHeader>
+                                    <CardTitle>{item.title}</CardTitle>
+                                    <CardDescription className="flex items-center gap-2 pt-1">
+                                    <Clock className="h-4 w-4" />
+                                    <span>{item.duration}</span>
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="whitespace-pre-line text-sm text-muted-foreground">{item.description}</p>
+                                </CardContent>
+                                </Card>
+                            </motion.div>
+                            ))}
+                        </div>
+                    )}
                      <div className="flex flex-col sm:flex-row gap-2 mt-6">
                         <Button onClick={handleStartOver} variant="outline" className="w-full">
                             <Wheat className="mr-2" /> Back to Crop Selection
                         </Button>
-                        <Button onClick={handleRegenerate} variant="secondary" className="w-full" disabled={cooldown > 0}>
+                        <Button onClick={handleRegenerate} variant="secondary" className="w-full" disabled={cooldown > 0 || loading}>
                             {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2" /> Regenerate Suggestions</>}
                         </Button>
                     </div>

@@ -4,20 +4,31 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Lottie from 'lottie-react';
-import { Camera, Upload, CheckCircle, AlertTriangle, Lightbulb, Loader, RefreshCw } from 'lucide-react';
+import { Camera, Upload, CheckCircle, AlertTriangle, Lightbulb, Loader, RefreshCw, Leaf, Siren, Sprout, TestTube2, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import analyzingAnimation from '../../../../public/lottie/analyzing.json';
 import { alertNearbyDiseases } from '@/ai/flows/geo-location-alerts';
-import { analyzeCrop } from '@/ai/ai-crop-scanner';
+import { analyzeCrop, AnalyzeCropOutput } from '@/ai/ai-crop-scanner';
 import { useAuth } from '@/lib/auth.tsx';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-type ScanResult = {
-  disease: string;
-  solution: string;
-};
+type ScanResult = AnalyzeCropOutput;
+
+const LanguageSwitcher = ({ language, setLanguage, disabled }: { language: string; setLanguage: (lang: string) => void; disabled: boolean }) => (
+    <div className="flex items-center justify-center gap-2 mb-4">
+        <Languages className="text-muted-foreground"/>
+        <Tabs defaultValue={language} onValueChange={setLanguage} className="w-[150px]">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="English" disabled={disabled}>English</TabsTrigger>
+                <TabsTrigger value="Hindi" disabled={disabled}>हिंदी</TabsTrigger>
+            </TabsList>
+        </Tabs>
+    </div>
+);
 
 export default function CropScannerPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -28,6 +39,7 @@ export default function CropScannerPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [cooldown, setCooldown] = useState(0);
+  const [language, setLanguage] = useState('English');
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -62,15 +74,10 @@ export default function CropScannerPage() {
     try {
       const analysisResult = await analyzeCrop({
         photoDataUri: imagePreview,
-        language: navigator.language || 'en',
+        language: language,
       });
       
-      const scanResult: ScanResult = {
-        disease: analysisResult.disease,
-        solution: analysisResult.solution,
-      };
-
-      setResult(scanResult);
+      setResult(analysisResult);
       setStatus('success');
 
       // Save scan to Firestore
@@ -79,8 +86,8 @@ export default function CropScannerPage() {
         await addDoc(scansCollection, {
           userId: user.uid,
           imageUrl: imagePreview, // Storing data URI, for a real app, use Firebase Storage
-          disease: scanResult.disease,
-          solution: scanResult.solution,
+          disease: analysisResult.disease,
+          solution: analysisResult.organicSolution, // Storing one solution for brevity in history
           createdAt: serverTimestamp(),
         });
       } catch (e) {
@@ -90,7 +97,7 @@ export default function CropScannerPage() {
       
       // Trigger geo-location alert in the background
       // Only send alert if a disease was detected
-      if (scanResult.disease && scanResult.disease.toLowerCase() !== 'healthy') {
+      if (analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
@@ -98,12 +105,12 @@ export default function CropScannerPage() {
               await alertNearbyDiseases({
                 latitude,
                 longitude,
-                disease: scanResult.disease,
+                disease: analysisResult.disease,
                 sourceUserId: user.uid,
               });
               toast({
                 title: "Community Alert Sent",
-                description: `Notified nearby farmers of ${scanResult.disease}.`,
+                description: `Notified nearby farmers of ${analysisResult.disease}.`,
               });
             } catch (error) {
                console.error("Failed to send location alert:", error);
@@ -138,17 +145,20 @@ export default function CropScannerPage() {
       }
   }
 
+  const isHealthy = result?.disease.toLowerCase() === 'healthy';
+
   return (
     <div className="container mx-auto max-w-4xl">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="text-center mb-8"
+        className="text-center mb-4"
       >
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
+      <LanguageSwitcher language={language} setLanguage={setLanguage} disabled={status === 'analyzing'} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <Card className="glass-card">
@@ -219,32 +229,74 @@ export default function CropScannerPage() {
                   )}
                   {status === 'success' && result && (
                     <div className="w-full text-left">
-                      <motion.h3
-                        className="text-2xl font-bold font-headline mb-4 flex items-center"
+                      <motion.div
+                        className="mb-4"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                       >
-                         <CheckCircle className="text-green-500 mr-2" /> Diagnosis Complete
-                      </motion.h3>
-                      <motion.div
-                        className="space-y-4"
-                        initial="hidden"
-                        animate="visible"
-                        variants={{
-                          visible: { transition: { staggerChildren: 0.1 } },
-                          hidden: {},
-                        }}
-                      >
-                        <motion.div variants={{ visible: { opacity: 1, y: 0 }, hidden: { opacity: 0, y: 10 } }}>
-                          <h4 className="font-semibold flex items-center"><AlertTriangle className="mr-2 h-4 w-4" />Disease Detected</h4>
-                          <p className="text-lg font-bold text-destructive">{result.disease}</p>
-                        </motion.div>
-                        
-                        <motion.div variants={{ visible: { opacity: 1, y: 0 }, hidden: { opacity: 0, y: 10 } }}>
-                          <h4 className="font-semibold flex items-center"><Lightbulb className="mr-2 h-4 w-4" />Recommended Solution</h4>
-                          <p className="text-sm text-muted-foreground bg-secondary p-3 rounded-md whitespace-pre-line">{result.solution}</p>
-                        </motion.div>
+                         <h3 className="text-2xl font-bold font-headline flex items-center">
+                           {isHealthy ? <CheckCircle className="text-green-500 mr-2" /> : <Siren className="text-destructive mr-2" />}
+                           {isHealthy ? 'Diagnosis: Healthy' : `Diagnosis: ${result.disease}`}
+                         </h3>
+                         <p className="text-sm text-muted-foreground mt-1">{result.description}</p>
                       </motion.div>
+                      
+                      <Accordion type="single" collapsible className="w-full" defaultValue={isHealthy ? '' : 'symptoms'}>
+                        {!isHealthy && (
+                          <>
+                            <AccordionItem value="symptoms">
+                              <AccordionTrigger>Symptoms</AccordionTrigger>
+                              <AccordionContent>
+                                <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                                  {result.symptoms.map((symptom, i) => <li key={i}>{symptom}</li>)}
+                                </ul>
+                              </AccordionContent>
+                            </AccordionItem>
+
+                            <AccordionItem value="organic">
+                                <AccordionTrigger>
+                                  <div className="flex items-center gap-2">
+                                    <Leaf className="text-green-600" /> Organic Solution
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-line">{result.organicSolution}</p>
+                                </AccordionContent>
+                            </AccordionItem>
+
+                            <AccordionItem value="chemical">
+                                <AccordionTrigger>
+                                  <div className="flex items-center gap-2">
+                                    <TestTube2 className="text-orange-500" /> Chemical Solution
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-line">{result.chemicalSolution}</p>
+                                </AccordionContent>
+                            </AccordionItem>
+
+                            <AccordionItem value="prevention">
+                                <AccordionTrigger>
+                                  <div className="flex items-center gap-2">
+                                    <Sprout className="text-blue-500" /> Prevention
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                                        {result.prevention.map((item, i) => <li key={i}>{item}</li>)}
+                                    </ul>
+                                </AccordionContent>
+                            </AccordionItem>
+                          </>
+                        )}
+                         {isHealthy && (
+                            <div className="text-center text-muted-foreground pt-4">
+                                <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-2"/>
+                                <p className="font-semibold">Your crop looks great!</p>
+                                <p className="text-sm">Keep up the good work.</p>
+                            </div>
+                         )}
+                      </Accordion>
                     </div>
                   )}
                 </CardContent>
