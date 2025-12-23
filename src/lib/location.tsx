@@ -78,6 +78,11 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         }
         setError(errorMessage);
         setLoading(false);
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 600000, // 10 minutes
       }
     );
   }, []);
