@@ -45,7 +45,7 @@ const prompt = ai.definePrompt({
   Language: {{{language}}}
   Photo: {{media url=photoDataUri}}
   `,
-  model: 'googleai/gemini-pro',
+  model: 'googleai/gemini-pro-vision',
 });
 
 const analyzeCropFlow = ai.defineFlow(

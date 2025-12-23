@@ -83,7 +83,7 @@ const suggestCropsPrompt = ai.definePrompt({
 
     For each crop, provide its name, a brief reason for its suitability (considering climate, feasibility, and demand), and a predicted profitability rating (High, Medium, or Low).
     `,
-    model: 'googleai/gemini-pro',
+    model: 'googleai/gemini-pro-vision',
 });
 
 const suggestCropsFlow = ai.defineFlow(
@@ -119,7 +119,7 @@ const generateRoadmapPrompt = ai.definePrompt({
 
   Provide the output in the specified JSON format.
   `,
-  model: 'googleai/gemini-pro',
+  model: 'googleai/gemini-pro-vision',
 });
 
 const generateGrowthRoadmapFlow = ai.defineFlow(
