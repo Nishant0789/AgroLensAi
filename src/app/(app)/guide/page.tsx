@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { suggestCrops, generateGrowthRoadmap, type SuggestCropsOutput, type GrowthRoadmapOutput } from '@/ai/flows/newbie-to-pro-growth-roadmap';
-import { Check, Loader, MapPin, Wheat, RefreshCw, DollarSign, Sparkles, Clock } from 'lucide-react';
+import { Check, Loader, MapPin, Wheat, RefreshCw, DollarSign, Sparkles, Clock, Satellite, BrainCircuit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 type CropSuggestion = SuggestCropsOutput['crops'][0];
@@ -16,9 +16,16 @@ const steps = [
   { id: 2, name: 'Growth Roadmap' },
 ];
 
+const loadingSteps = [
+    { text: "Getting your location...", icon: MapPin },
+    { text: "Analyzing local climate...", icon: Satellite },
+    { text: "Suggesting profitable crops...", icon: BrainCircuit }
+]
+
 export default function GuidePage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingStatus, setLoadingStatus] = useState("Getting your location...");
   const [location, setLocation] = useState<{ name: string; lat: number, lon: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<CropSuggestion[]>([]);
@@ -29,6 +36,8 @@ export default function GuidePage() {
     setIsLoading(true);
     setError(null);
     setSuggestions([]);
+    setLoadingStatus("Getting your location...");
+
 
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser.');
@@ -41,12 +50,14 @@ export default function GuidePage() {
         const { latitude, longitude } = position.coords;
         try {
           // Get location name
+          setLoadingStatus("Analyzing local climate...");
           const geoResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
           const geoData = await geoResponse.json();
           const locationName = geoData.city ? `${geoData.city}, ${geoData.localityInfo.administrative[1].name}` : 'your current location';
           setLocation({ name: locationName, lat: latitude, lon: longitude });
 
           // Get crop suggestions
+          setLoadingStatus("Suggesting profitable crops...");
           const result = await suggestCrops({ location: locationName });
           setSuggestions(result.crops);
         } catch (err) {
@@ -104,6 +115,35 @@ export default function GuidePage() {
     )
   }
 
+  const LoadingIndicator = () => (
+     <div className="flex flex-col items-center justify-center min-h-[200px] gap-4">
+        <div className="w-full max-w-xs space-y-3">
+          {loadingSteps.map((step, index) => {
+            const currentIndex = loadingSteps.findIndex(s => s.text === loadingStatus);
+            const isActive = index === currentIndex;
+            const isDone = index < currentIndex;
+            const Icon = step.icon;
+
+            return (
+              <motion.div 
+                key={step.text} 
+                className="flex items-center gap-3"
+                initial={{ opacity: 0.5, x: -10 }}
+                animate={{ opacity: isDone || isActive ? 1 : 0.5, x: 0 }}
+              >
+                  <div className={`flex items-center justify-center w-6 h-6 rounded-full ${isDone ? 'bg-green-500' : 'bg-primary/20'}`}>
+                      {isDone ? <Check className="w-4 h-4 text-white" /> : <Icon className={`w-4 h-4 text-primary ${isActive ? 'animate-pulse' : ''}`} />}
+                  </div>
+                  <span className={`text-sm ${isActive ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
+                      {step.text}
+                  </span>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+  );
+
   return (
     <div className="container mx-auto max-w-4xl">
       <motion.div
@@ -143,15 +183,10 @@ export default function GuidePage() {
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle>AI Crop Suggestions for Your Area</CardTitle>
-                {location && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
+                {location && !isLoading && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
               </CardHeader>
               <CardContent className="p-6">
-                {isLoading && (
-                   <div className="flex flex-col items-center justify-center min-h-[200px] gap-2">
-                      <Loader className="w-8 h-8 animate-spin text-primary" />
-                      <p className="text-muted-foreground">Analyzing your location and climate...</p>
-                    </div>
-                )}
+                {isLoading && <LoadingIndicator />}
                 {error && !isLoading && (
                   <div className="flex flex-col items-center justify-center min-h-[200px] gap-2 text-center">
                        <p className="text-destructive">{error}</p>
@@ -175,9 +210,9 @@ export default function GuidePage() {
                                   <p className="text-sm text-muted-foreground">{crop.reason}</p>
                               </CardContent>
                               <div className="p-4 pt-0">
-                              <Button onClick={() => handleSelectCrop(crop)} className="w-full">
-                                  <Wheat className="mr-2" />
-                                  Generate Guide for {crop.name}
+                              <Button onClick={() => handleSelectCrop(crop)} className="w-full" disabled={isLoading}>
+                                  {isLoading && selectedCrop?.name === crop.name ? <Loader className="mr-2 animate-spin"/> : <Wheat className="mr-2" />}
+                                  {isLoading && selectedCrop?.name === crop.name ? 'Generating...' : `Generate Guide for ${crop.name}`}
                               </Button>
                               </div>
                           </Card>
@@ -191,43 +226,52 @@ export default function GuidePage() {
           
           {currentStep === 2 && roadmap && selectedCrop && (
             <div>
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold font-headline">{roadmap.title}</h2>
-                <p className="text-muted-foreground">A step-by-step guide for growing <span className="font-semibold text-primary">{selectedCrop.name}</span> in <span className="font-semibold text-primary">{location?.name}</span>.</p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute left-4 top-4 h-full border-l-2 border-border border-dashed"></div>
-                {roadmap.roadmap.map((item, index) => (
-                  <motion.div 
-                    key={index} 
-                    className="relative pl-10 mb-8"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <div className="absolute left-0 top-3 flex items-center justify-center w-8 h-8 bg-primary rounded-full text-primary-foreground font-bold">
-                      {index + 1}
+                 {isLoading ? (
+                    <div className="flex flex-col items-center justify-center min-h-[200px] gap-2">
+                        <Loader className="w-8 h-8 animate-spin text-primary" />
+                        <p className="text-muted-foreground">Generating your personalized roadmap...</p>
                     </div>
-                    <Card className="glass-card">
-                      <CardHeader>
-                        <CardTitle>{item.title}</CardTitle>
-                        <CardDescription className="flex items-center gap-2 pt-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{item.duration}</span>
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="whitespace-pre-line text-muted-foreground text-sm">{item.description}</p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-              <Button onClick={handleStartOver} variant="outline" className="mt-6 w-full">
-                <RefreshCw className="mr-2" />
-                Start Over
-              </Button>
+                ) : (
+                <>
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-bold font-headline">{roadmap.title}</h2>
+                        <p className="text-muted-foreground">A step-by-step guide for growing <span className="font-semibold text-primary">{selectedCrop.name}</span> in <span className="font-semibold text-primary">{location?.name}</span>.</p>
+                    </div>
+
+                    <div className="relative">
+                        <div className="absolute left-4 top-4 h-full border-l-2 border-border border-dashed"></div>
+                        {roadmap.roadmap.map((item, index) => (
+                        <motion.div 
+                            key={index} 
+                            className="relative pl-10 mb-8"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                        >
+                            <div className="absolute left-0 top-3 flex items-center justify-center w-8 h-8 bg-primary rounded-full text-primary-foreground font-bold">
+                            {index + 1}
+                            </div>
+                            <Card className="glass-card">
+                            <CardHeader>
+                                <CardTitle>{item.title}</CardTitle>
+                                <CardDescription className="flex items-center gap-2 pt-1">
+                                <Clock className="h-4 w-4" />
+                                <span>{item.duration}</span>
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="whitespace-pre-line text-muted-foreground text-sm">{item.description}</p>
+                            </CardContent>
+                            </Card>
+                        </motion.div>
+                        ))}
+                    </div>
+                    <Button onClick={handleStartOver} variant="outline" className="mt-6 w-full">
+                        <RefreshCw className="mr-2" />
+                        Start Over
+                    </Button>
+                </>
+              )}
             </div>
           )}
         </motion.div>
