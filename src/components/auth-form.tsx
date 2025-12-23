@@ -9,22 +9,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/auth.tsx';
-import { Chrome, ArrowLeft } from 'lucide-react';
+import { Chrome, ArrowLeft, Loader2, Phone, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+const phoneSchema = z.object({
+  phone: z.string().min(10, 'Please enter a valid phone number with country code (e.g., +1234567890)'),
+});
+const otpSchema = z.object({
+    otp: z.string().length(6, 'OTP must be 6 digits'),
 });
 
-const signupSchema = z.object({
-  name: z.string().min(2, 'Name is too short'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-type SignupFormValues = z.infer<typeof signupSchema>;
+type PhoneFormValues = z.infer<typeof phoneSchema>;
+type OtpFormValues = z.infer<typeof otpSchema>;
 
 const variants = {
   enter: (direction: number) => ({
@@ -42,32 +38,54 @@ const variants = {
 };
 
 export default function AuthForm() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [view, setView] = useState<'phone' | 'otp'>('phone');
   const [direction, setDirection] = useState(0);
-  const { signInWithGoogle } = useAuth();
-
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { signInWithGoogle, signInWithPhone, verifyOtp } = useAuth();
+  
+  const phoneForm = useForm<PhoneFormValues>({
+    resolver: zodResolver(phoneSchema),
   });
 
-  const signupForm = useForm<SignupFormValues>({
-    resolver: zodResolver(signupSchema),
+  const otpForm = useForm<OtpFormValues>({
+    resolver: zodResolver(otpSchema),
   });
-  
-  const handleToggle = () => {
-    setDirection(isLogin ? 1 : -1);
-    setIsLogin(!isLogin);
-  };
-  
-  const onLogin = (data: LoginFormValues) => {
-    console.log('Login with email/password is not implemented in this demo.');
-    signInWithGoogle(); // Default to Google sign-in for simplicity
+
+  const handleSendOtp = async (data: PhoneFormValues) => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+        await signInWithPhone(data.phone);
+        setDirection(1);
+        setView('otp');
+    } catch(err: any) {
+        console.error(err);
+        setError(err.message || "Failed to send OTP. Please check the number and try again.");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
-  const onSignup = (data: SignupFormValues) => {
-    console.log('Sign up with email/password is not implemented in this demo.');
-    signInWithGoogle(); // Default to Google sign-in for simplicity
+  const handleVerifyOtp = async (data: OtpFormValues) => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+        await verifyOtp(data.otp);
+        // On success, the onAuthStateChanged in AuthProvider will handle the redirect.
+    } catch (err: any) {
+        console.error(err);
+        setError(err.message || "Invalid OTP. Please try again.");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
+
+  const handleBack = () => {
+    setDirection(-1);
+    setView('phone');
+    setError(null);
+  }
   
   return (
     <div className="w-full max-w-md mx-auto glass-card overflow-hidden">
@@ -77,32 +95,32 @@ export default function AuthForm() {
           Back to Home
         </Link>
         <AnimatePresence initial={false} custom={direction}>
-          {isLogin ? (
+          {view === 'phone' ? (
             <motion.div
-              key="login"
+              key="phone"
               custom={direction}
               variants={variants}
               initial="enter"
               animate="center"
               exit="exit"
               transition={{ type: 'tween', duration: 0.5 }}
-              className="absolute w-full top-20 left-0 px-8"
+              className="absolute w-full top-24 left-0 px-8"
             >
-              <h2 className="text-2xl font-bold font-headline text-center mb-2">Welcome Back</h2>
-              <p className="text-center text-muted-foreground mb-6">Sign in to continue to AgroLens AI.</p>
+              <h2 className="text-2xl font-bold font-headline text-center mb-2">Sign In</h2>
+              <p className="text-center text-muted-foreground mb-6">Enter your phone number to begin.</p>
               
-              <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
+              <form onSubmit={phoneForm.handleSubmit(handleSendOtp)} className="space-y-4">
                 <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" placeholder="you@example.com" {...loginForm.register('email')} />
-                  {loginForm.formState.errors.email && <p className="text-red-500 text-sm">{loginForm.formState.errors.email.message}</p>}
+                  <Label htmlFor="phone-input">Phone Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input id="phone-input" type="tel" placeholder="+1 234 567 890" {...phoneForm.register('phone')} className="pl-10" />
+                  </div>
+                  {phoneForm.formState.errors.phone && <p className="text-destructive text-sm">{phoneForm.formState.errors.phone.message}</p>}
                 </div>
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input id="login-password" type="password" placeholder="••••••••" {...loginForm.register('password')} />
-                  {loginForm.formState.errors.password && <p className="text-red-500 text-sm">{loginForm.formState.errors.password.message}</p>}
-                </div>
-                <Button type="submit" className="w-full">Sign In</Button>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="animate-spin" /> : "Send OTP"}
+                </Button>
               </form>
               
               <div className="relative my-6">
@@ -115,53 +133,41 @@ export default function AuthForm() {
               </div>
               
               <Button variant="outline" className="w-full" onClick={signInWithGoogle}><Chrome className="mr-2 h-4 w-4" /> Google</Button>
-              
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                Don't have an account?{' '}
-                <button onClick={handleToggle} className="font-semibold text-primary hover:underline">
-                  Sign up
-                </button>
-              </p>
+              {error && <p className="text-destructive text-center text-sm mt-4">{error}</p>}
+              <div id="recaptcha-container"></div>
             </motion.div>
           ) : (
             <motion.div
-              key="signup"
+              key="otp"
               custom={direction}
               variants={variants}
               initial="enter"
               animate="center"
               exit="exit"
               transition={{ type: 'tween', duration: 0.5 }}
-              className="absolute w-full top-20 left-0 px-8"
+              className="absolute w-full top-24 left-0 px-8"
             >
-              <h2 className="text-2xl font-bold font-headline text-center mb-2">Create an Account</h2>
-              <p className="text-center text-muted-foreground mb-6">Start your journey with AgroLens AI.</p>
+              <button onClick={handleBack} className="flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-6">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to phone number
+              </button>
+              <h2 className="text-2xl font-bold font-headline text-center mb-2">Verify OTP</h2>
+              <p className="text-center text-muted-foreground mb-6">Enter the code sent to your phone.</p>
               
-              <form onSubmit={signupForm.handleSubmit(onSignup)} className="space-y-4">
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="signup-name">Name</Label>
-                  <Input id="signup-name" type="text" placeholder="Your Name" {...signupForm.register('name')} />
-                  {signupForm.formState.errors.name && <p className="text-red-500 text-sm">{signupForm.formState.errors.name.message}</p>}
+              <form onSubmit={otpForm.handleSubmit(handleVerifyOtp)} className="space-y-4">
+                 <div className="grid w-full items-center gap-1.5">
+                  <Label htmlFor="otp-input">Verification Code</Label>
+                   <div className="relative">
+                     <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                     <Input id="otp-input" type="text" placeholder="123456" {...otpForm.register('otp')} className="pl-10" />
+                   </div>
+                  {otpForm.formState.errors.otp && <p className="text-destructive text-sm">{otpForm.formState.errors.otp.message}</p>}
                 </div>
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input id="signup-email" type="email" placeholder="you@example.com" {...signupForm.register('email')} />
-                   {signupForm.formState.errors.email && <p className="text-red-500 text-sm">{signupForm.formState.errors.email.message}</p>}
-                </div>
-                <div className="grid w-full items-center gap-1.5">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input id="signup-password" type="password" placeholder="••••••••" {...signupForm.register('password')} />
-                   {signupForm.formState.errors.password && <p className="text-red-500 text-sm">{signupForm.formState.errors.password.message}</p>}
-                </div>
-                <Button type="submit" className="w-full">Sign Up</Button>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                   {isSubmitting ? <Loader2 className="animate-spin" /> : "Verify & Sign In"}
+                </Button>
               </form>
-              
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                Already have an account?{' '}
-                <button onClick={handleToggle} className="font-semibold text-primary hover:underline">
-                  Sign in
-                </button>
-              </p>
+              {error && <p className="text-destructive text-center text-sm mt-4">{error}</p>}
             </motion.div>
           )}
         </AnimatePresence>

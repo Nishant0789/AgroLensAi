@@ -43,7 +43,7 @@
           "description": "The crop the user is currently growing."
         }
       },
-      "required": ["uid", "email"]
+      "required": ["uid"]
     },
     "DiseaseAlert": {
       "title": "Disease Alert",
@@ -127,7 +127,7 @@
     }
   },
   "auth": {
-    "providers": ["anonymous", "google.com"]
+    "providers": ["phone", "google.com"]
   },
   "firestore": {
     "/users/{userId}": {
