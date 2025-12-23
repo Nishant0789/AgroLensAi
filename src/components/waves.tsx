@@ -24,8 +24,8 @@ interface WavesProps {
 
 export function Waves({
     className = "",
-    strokeColor = "hsl(var(--primary))",
-    backgroundColor = "hsl(var(--background))",
+    strokeColor = "hsl(120 100% 50%)", // Neon Green
+    backgroundColor = "hsl(0 0% 0%)", // Black
     pointerSize = 0.5
 }: WavesProps) {
     const containerRef = useRef<HTMLDivElement>(null)
@@ -137,6 +137,7 @@ export function Waves({
             path.setAttribute('fill', 'none')
             path.setAttribute('stroke', strokeColor)
             path.setAttribute('stroke-width', '1')
+            path.style.filter = `drop-shadow(0 0 5px ${strokeColor})`; // Neon glow effect
 
             svgRef.current.appendChild(path)
             pathsRef.current.push(path)
@@ -340,6 +341,7 @@ export function Waves({
                     borderRadius: '50%',
                     transform: 'translate3d(calc(var(--x) - 50%), calc(var(--y) - 50%), 0)',
                     willChange: 'transform',
+                    boxShadow: `0 0 15px 5px ${strokeColor}`, // Neon glow for the dot
                 }}
             />
         </div>
