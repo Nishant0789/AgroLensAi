@@ -86,7 +86,6 @@ export default function GuidePage() {
     }
 
     // This part is a placeholder for generating a new roadmap on demand.
-    // For this app, we'll just switch to the pre-generated one.
     // In a real app, you would make another AI call here.
     setSelectedCrop(crop);
     
@@ -241,7 +240,7 @@ export default function GuidePage() {
             <div>
                  <>
                     <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold font-headline">{selectedRoadmap.title}</h2>
+                        <h2 className="text-3xl font-bold font-headline">{selectedRoadmap.title}</h2>
                         <p className="text-muted-foreground">A step-by-step guide for growing <span className="font-semibold text-primary">{selectedCrop.name}</span> in <span className="font-semibold text-primary">{location?.name}</span>.</p>
                     </div>
 
@@ -258,7 +257,7 @@ export default function GuidePage() {
                             <div className="absolute left-0 top-3 flex items-center justify-center w-8 h-8 bg-primary rounded-full text-primary-foreground font-bold">
                             {index + 1}
                             </div>
-                            <Card className="glass-card">
+                            <Card className="ml-4 bg-background/80 backdrop-blur-sm shadow-md border-border/50">
                             <CardHeader>
                                 <CardTitle>{item.title}</CardTitle>
                                 <CardDescription className="flex items-center gap-2 pt-1">
@@ -267,7 +266,7 @@ export default function GuidePage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <p className="whitespace-pre-line text-muted-foreground text-sm">{item.description}</p>
+                                <p className="whitespace-pre-line text-sm">{item.description}</p>
                             </CardContent>
                             </Card>
                         </motion.div>
