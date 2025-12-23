@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { initializeFirebase } from '@/firebase';
-import { collection, getDocs, doc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, addDoc, serverTimestamp, Firestore } from 'firebase/firestore';
 import { generatePreventiveMeasures } from './generate-preventive-measures';
 
 const GeoLocationAlertsInputSchema = z.object({
@@ -41,19 +41,10 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * c; // Distance in km
 }
 
-
+// This function is not a flow, so we don't define it with ai.defineFlow
+// It's a server action that will be called from the client.
 export async function alertNearbyDiseases(input: GeoLocationAlertsInput): Promise<GeoLocationAlertsOutput> {
-  return geoLocationAlertsFlow(input);
-}
-
-const geoLocationAlertsFlow = ai.defineFlow(
-  {
-    name: 'geoLocationAlertsFlow',
-    inputSchema: GeoLocationAlertsInputSchema,
-    outputSchema: GeoLocationAlertsOutputSchema,
-  },
-  async (input) => {
-    const { firestore } = initializeFirebase();
+    const { firestore } = initializeFirebase(); // This is ok now because we are not in a flow
     const { latitude, longitude, disease, sourceUserId } = input;
     
     // 1. Store the new disease alert
@@ -103,5 +94,4 @@ const geoLocationAlertsFlow = ai.defineFlow(
     }
     
     return {message: `Alerts processed for ${nearbyUsers.length} nearby users.`};
-  }
-);
+}
