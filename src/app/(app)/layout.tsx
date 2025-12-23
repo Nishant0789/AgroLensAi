@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { LocationProvider } from '@/lib/location';
 import { useCollection, useUser, useFirestore } from '@/firebase';
-import { collection, query, where, limit, getAuth } from 'firebase/firestore';
+import { collection, query, where, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { initializeFirebase } from '@/firebase';
 
@@ -55,7 +55,7 @@ export default function AppLayout({
     }
   }, [user, userLoading, router]);
 
-  if (userLoading || !user || !firestore) {
+  if (userLoading || !user) {
     return (
       <div className="flex h-screen items-center justify-center bg-background/0">
         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>

@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAuth as useFirebaseAuth, useFirestore, useUser as useFirebaseUser } from '@/firebase';
-import { GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
+import { GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -27,25 +27,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const { user: firebaseUser, loading: firebaseLoading } = useFirebaseUser();
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const auth = useFirebaseAuth();
   const firestore = useFirestore();
 
   useEffect(() => {
-    const handleUser = async (fbUser: FirebaseUser | null) => {
-      if (fbUser) {
-        const userDocRef = doc(firestore, 'users', fbUser.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userDocRef = doc(firestore, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userDocRef);
 
         let userData = {};
         if (!userDoc.exists()) {
           const newUserPayload = {
-            uid: fbUser.uid,
-            email: fbUser.email,
-            displayName: fbUser.displayName,
-            photoURL: fbUser.photoURL,
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
             createdAt: serverTimestamp(),
             currentCrop: 'Wheat' // Default crop
           };
@@ -56,10 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         setUser({
-          uid: fbUser.uid,
-          email: fbUser.email,
-          displayName: fbUser.displayName,
-          photoURL: fbUser.photoURL,
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
           firestore: firestore,
           ...userData,
         });
@@ -68,12 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       }
       setLoading(false);
-    };
-    
-    if (!firebaseLoading) {
-        handleUser(firebaseUser);
-    }
-  }, [firebaseUser, firebaseLoading, firestore, router]);
+    });
+
+    return () => unsubscribe();
+  }, [auth, firestore]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
