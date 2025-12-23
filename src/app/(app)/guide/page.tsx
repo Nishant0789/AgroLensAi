@@ -77,16 +77,8 @@ export default function GuidePage() {
   const handleSelectCrop = async (crop: CropSuggestion) => {
     if (!guideData) return;
     
-    // If the roadmap for this crop is already generated, just show it
-    if(guideData.roadmap.title.includes(crop.name)) {
-        setSelectedCrop(crop);
-        setSelectedRoadmap(guideData.roadmap);
-        setCurrentStep(2);
-        return;
-    }
-
-    // This part is a placeholder for generating a new roadmap on demand.
-    // In a real app, you would make another AI call here.
+    // In a real app, you might generate a new roadmap here if it's not the default one.
+    // For this demo, we assume the AI provides roadmaps for all suggestions or we reuse the main one.
     setSelectedCrop(crop);
     
     // For demonstration, we'll just use the existing roadmap and change the title
@@ -156,31 +148,34 @@ export default function GuidePage() {
   );
 
   return (
-    <div className="container mx-auto max-w-4xl">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
-      >
-        <h1 className="text-3xl font-bold font-headline">Newbie to Pro Guide</h1>
-        <p className="text-muted-foreground mt-2">Your personalized path to a successful harvest.</p>
-      </motion.div>
-      
-      <div className="flex justify-center mb-8">
-        <ol className="flex items-center space-x-2">
-          {steps.map((step, index) => (
-            <li key={step.id} className="flex items-center">
-              <div className="flex items-center">
-                <span className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= step.id ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
-                  {currentStep > step.id ? <Check className="w-5 h-5" /> : step.id}
-                </span>
-                <span className={`ml-2 font-medium ${currentStep >= step.id ? 'text-primary' : 'text-muted-foreground'}`}>{step.name}</span>
-              </div>
-              {index < steps.length - 1 && <div className="w-12 h-px bg-border mx-4" />}
-            </li>
-          ))}
-        </ol>
-      </div>
+    <div className="container mx-auto max-w-4xl space-y-8">
+       <Card className="glass-card">
+          <CardContent className="p-6 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <h1 className="text-3xl font-bold font-headline">Newbie to Pro Guide</h1>
+              <p className="text-muted-foreground mt-2">Your personalized path to a successful harvest.</p>
+            </motion.div>
+            
+            <div className="flex justify-center mt-8">
+              <ol className="flex items-center space-x-2">
+                {steps.map((step, index) => (
+                  <li key={step.id} className="flex items-center">
+                    <div className="flex items-center">
+                      <span className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= step.id ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
+                        {currentStep > step.id ? <Check className="w-5 h-5" /> : step.id}
+                      </span>
+                      <span className={`ml-2 font-medium ${currentStep >= step.id ? 'text-primary' : 'text-muted-foreground'}`}>{step.name}</span>
+                    </div>
+                    {index < steps.length - 1 && <div className="w-12 h-px bg-border mx-4" />}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </CardContent>
+        </Card>
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -257,7 +252,7 @@ export default function GuidePage() {
                             <div className="absolute left-0 top-3 flex items-center justify-center w-8 h-8 bg-primary rounded-full text-primary-foreground font-bold">
                             {index + 1}
                             </div>
-                            <Card className="ml-4 bg-background/80 backdrop-blur-sm shadow-md border-border/50">
+                            <Card className="ml-4 bg-card shadow-md border-border/50">
                             <CardHeader>
                                 <CardTitle>{item.title}</CardTitle>
                                 <CardDescription className="flex items-center gap-2 pt-1">
@@ -266,7 +261,7 @@ export default function GuidePage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <p className="whitespace-pre-line text-sm">{item.description}</p>
+                                <p className="whitespace-pre-line text-sm text-muted-foreground">{item.description}</p>
                             </CardContent>
                             </Card>
                         </motion.div>
