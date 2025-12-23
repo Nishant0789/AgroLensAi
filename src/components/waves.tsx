@@ -137,7 +137,6 @@ export function Waves({
             path.setAttribute('fill', 'none')
             path.setAttribute('stroke', strokeColor)
             path.setAttribute('stroke-width', '1')
-            path.style.filter = `drop-shadow(0 0 5px ${strokeColor})`; // Neon glow effect
 
             svgRef.current.appendChild(path)
             pathsRef.current.push(path)
@@ -341,7 +340,6 @@ export function Waves({
                     borderRadius: '50%',
                     transform: 'translate3d(calc(var(--x) - 50%), calc(var(--y) - 50%), 0)',
                     willChange: 'transform',
-                    boxShadow: `0 0 15px 5px ${strokeColor}`, // Neon glow for the dot
                 }}
             />
         </div>
