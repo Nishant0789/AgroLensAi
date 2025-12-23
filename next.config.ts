@@ -30,6 +30,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    // This allows requests from the Firebase Studio preview URL.
+    allowedDevOrigins: ["*.firebase-preview.com", "*.cloudworkstations.dev"],
+  }
 };
 
 export default nextConfig;
