@@ -22,18 +22,18 @@ let auth: Auth;
 let firestore: Firestore;
 
 function initializeFirebase() {
-  if (
-    typeof window !== 'undefined' &&
-    !getApps().find((app) => app.name === firebaseConfig.projectId)
-  ) {
-    firebaseApp = initializeApp(firebaseConfig);
-    auth = getAuth(firebaseApp);
-    firestore = getFirestore(firebaseApp);
-  } else {
-    firebaseApp = getApp();
+  if (typeof window !== 'undefined') {
+    if (!getApps().length) {
+      firebaseApp = initializeApp(firebaseConfig);
+    } else {
+      firebaseApp = getApp();
+    }
     auth = getAuth(firebaseApp);
     firestore = getFirestore(firebaseApp);
   }
+  // On the server, we'll return undefined and let the client-side provider handle it.
+  // This is a temporary state until the client hydrates.
+  // @ts-ignore
   return { firebaseApp, auth, firestore };
 }
 
