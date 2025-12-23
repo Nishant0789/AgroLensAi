@@ -37,7 +37,7 @@ export default function GuidePage() {
   const [roadmap, setRoadmap] = useState<GrowthRoadmapOutput | null>(null);
 
   const fetchSuggestions = async () => {
-    if (!location) return;
+    if (!location?.name) return;
 
     setSuggestionsLoading(true);
     setSuggestionsError(null);
@@ -62,7 +62,7 @@ export default function GuidePage() {
   }, [location]);
 
   const handleSelectCrop = async (crop: CropSuggestion) => {
-    if (!location) return;
+    if (!location?.name) return;
     setSelectedCrop(crop);
     setRoadmapLoading(true);
     setSuggestionsError(null);
