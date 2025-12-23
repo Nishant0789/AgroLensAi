@@ -37,7 +37,7 @@ const prompt = ai.definePrompt({
     Provide a concise, actionable list of preventive measures they should take immediately.
     Focus on practical steps suitable for a small to medium-sized farm.
     `,
-    model: 'googleai/gemini-2.5-flash',
+    model: 'googleai/gemini-2.5-flash-lite',
 });
 
 const generatePreventiveMeasuresFlow = ai.defineFlow(
