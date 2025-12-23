@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth as useFirebaseAuth, useFirestore, useUser as useFirebaseUser } from '@/firebase';
-import { GoogleAuthProvider, signInWithRedirect, signOut as firebaseSignOut } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -79,9 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     try {
       setLoading(true);
-      await signInWithRedirect(auth, provider);
-      // The user will be redirected to the Google sign-in page.
-      // The onAuthStateChanged listener will handle the user state upon return.
+      await signInWithPopup(auth, provider);
+      router.push('/dashboard');
     } catch (error) {
       console.error("Error signing in with Google: ", error);
       setLoading(false);
