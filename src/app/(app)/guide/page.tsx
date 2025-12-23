@@ -1,55 +1,95 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { generateGrowthRoadmap } from '@/ai/flows/newbie-to-pro-growth-roadmap';
-import { Check, Loader, MapPin, Wheat } from 'lucide-react';
+import { suggestCrops, generateGrowthRoadmap, type SuggestCropsOutput } from '@/ai/flows/newbie-to-pro-growth-roadmap';
+import { Check, Loader, MapPin, Wheat, RefreshCw, DollarSign, Sparkles } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+
+type CropSuggestion = SuggestCropsOutput['crops'][0];
 
 const steps = [
-  { id: 1, name: 'Your Farm' },
+  { id: 1, name: 'Crop Selection' },
   { id: 2, name: 'Growth Roadmap' },
 ];
 
-const formSchema = z.object({
-  location: z.string().min(2, 'Please enter a valid location.'),
-  cropType: z.string().min(2, 'Please enter a valid crop type.'),
-});
-type FormValues = z.infer<typeof formSchema>;
-
 export default function GuidePage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [location, setLocation] = useState<{ name: string; lat: number, lon: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<CropSuggestion[]>([]);
+  const [selectedCrop, setSelectedCrop] = useState<CropSuggestion | null>(null);
   const [roadmap, setRoadmap] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-  });
+  const fetchLocationAndSuggestions = async () => {
+    setIsLoading(true);
+    setError(null);
+    setSuggestions([]);
 
-  const onSubmit = async (data: FormValues) => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser.');
+      setIsLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // Get location name
+          const geoResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+          const geoData = await geoResponse.json();
+          const locationName = geoData.city ? `${geoData.city}, ${geoData.localityInfo.administrative[1].name}` : 'your current location';
+          setLocation({ name: locationName, lat: latitude, lon: longitude });
+
+          // Get crop suggestions
+          const result = await suggestCrops({ location: locationName });
+          setSuggestions(result.crops);
+        } catch (err) {
+          console.error(err);
+          setError('Could not fetch crop suggestions for your location. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      (err) => {
+        setError('Location access denied. Please enable it in your browser settings and try again.');
+        setIsLoading(false);
+      }
+    );
+  };
+  
+  useEffect(() => {
+    fetchLocationAndSuggestions();
+  }, []);
+
+  const handleSelectCrop = async (crop: CropSuggestion) => {
+    if (!location) return;
+    setSelectedCrop(crop);
     setIsLoading(true);
     try {
-      const result = await generateGrowthRoadmap(data);
-      // Simple parsing of the returned string for accordion
+      const result = await generateGrowthRoadmap({ location: location.name, cropType: crop.name });
       setRoadmap(result.roadmap);
       setCurrentStep(2);
     } catch (error) {
       console.error('Failed to generate roadmap:', error);
+      setError('Could not generate the growth roadmap. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleStartOver = () => {
+    setCurrentStep(1);
+    setSelectedCrop(null);
+    setRoadmap(null);
+    fetchLocationAndSuggestions();
+  }
   
   const parseRoadmap = (text: string) => {
     const sections = text.split('\n\n- ');
@@ -63,6 +103,20 @@ export default function GuidePage() {
         };
     });
     return { title, items };
+  }
+
+  const ProfitabilityBadge = ({ level }: { level: 'High' | 'Medium' | 'Low' }) => {
+    const variants = {
+      High: { variant: 'default', className: 'bg-green-600' },
+      Medium: { variant: 'secondary', className: 'bg-yellow-500' },
+      Low: { variant: 'destructive', className: 'bg-red-500' },
+    } as const;
+    return (
+       <Badge variant={variants[level].variant} className={variants[level].className}>
+            <DollarSign className="mr-1 h-3 w-3" />
+            {level} Profitability
+       </Badge>
+    )
   }
 
   return (
@@ -102,44 +156,63 @@ export default function GuidePage() {
             transition={{ duration: 0.3 }}
           >
             {currentStep === 1 && (
-              <form onSubmit={handleSubmit(onSubmit)}>
+              <>
                 <CardHeader>
-                  <CardTitle>Tell us about your farm</CardTitle>
-                  <CardDescription>This information will help us create a tailored plan for you.</CardDescription>
+                  <CardTitle>AI Crop Suggestions for Your Area</CardTitle>
+                  {location && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
                 </CardHeader>
-                <CardContent className="space-y-6 p-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location (e.g., city, state)</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="location" placeholder="e.g., Central Valley, California" {...register('location')} className="pl-10" />
+                <CardContent className="p-6">
+                  {isLoading && (
+                     <div className="flex flex-col items-center justify-center min-h-[200px] gap-2">
+                        <Loader className="w-8 h-8 animate-spin text-primary" />
+                        <p className="text-muted-foreground">Analyzing your location and climate...</p>
+                      </div>
+                  )}
+                  {error && !isLoading && (
+                    <div className="flex flex-col items-center justify-center min-h-[200px] gap-2 text-center">
+                         <p className="text-destructive">{error}</p>
+                         <Button onClick={fetchLocationAndSuggestions}><RefreshCw className="mr-2"/> Try Again</Button>
                     </div>
-                    {errors.location && <p className="text-sm text-destructive">{errors.location.message}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cropType">Primary Crop</Label>
-                    <div className="relative">
-                      <Wheat className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input id="cropType" placeholder="e.g., Corn, Soybeans, Wheat" {...register('cropType')} className="pl-10" />
+                  )}
+                  {!isLoading && !error && suggestions.length > 0 && (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {suggestions.map((crop) => (
+                        <motion.div
+                            key={crop.name}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                        >
+                            <Card className="hover:shadow-lg hover:border-primary/50 transition-all h-full flex flex-col">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2"><Sparkles className="text-primary"/>{crop.name}</CardTitle>
+                                    <ProfitabilityBadge level={crop.profitability}/>
+                                </CardHeader>
+                                <CardContent className="flex-1">
+                                    <p className="text-sm text-muted-foreground">{crop.reason}</p>
+                                </CardContent>
+                                <div className="p-4 pt-0">
+                                <Button onClick={() => handleSelectCrop(crop)} className="w-full">
+                                    <Wheat className="mr-2" />
+                                    Generate Guide for {crop.name}
+                                </Button>
+                                </div>
+                            </Card>
+                        </motion.div>
+                      ))}
                     </div>
-                     {errors.cropType && <p className="text-sm text-destructive">{errors.cropType.message}</p>}
-                  </div>
-                  <Button type="submit" disabled={isLoading} className="w-full">
-                    {isLoading && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-                    Generate My Roadmap
-                  </Button>
+                  )}
                 </CardContent>
-              </form>
+              </>
             )}
             
-            {currentStep === 2 && roadmap && (
+            {currentStep === 2 && roadmap && selectedCrop && (
               <div>
                 <CardHeader>
                   <CardTitle>{parseRoadmap(roadmap).title}</CardTitle>
-                  <CardDescription>Follow these steps for a successful season.</CardDescription>
+                  <CardDescription>A step-by-step guide for growing <span className="font-semibold text-primary">{selectedCrop.name}</span> in <span className="font-semibold text-primary">{location?.name}</span>.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Accordion type="single" collapsible className="w-full">
+                  <Accordion type="single" collapsible className="w-full" defaultValue="item-0">
                     {parseRoadmap(roadmap).items.map((item, index) => (
                       <AccordionItem value={`item-${index}`} key={index}>
                         <AccordionTrigger>{item.title}</AccordionTrigger>
@@ -151,7 +224,10 @@ export default function GuidePage() {
                       </AccordionItem>
                     ))}
                   </Accordion>
-                   <Button onClick={() => setCurrentStep(1)} variant="outline" className="mt-6 w-full">Start Over</Button>
+                   <Button onClick={handleStartOver} variant="outline" className="mt-6 w-full">
+                     <RefreshCw className="mr-2" />
+                     Start Over
+                    </Button>
                 </CardContent>
               </div>
             )}
