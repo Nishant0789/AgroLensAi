@@ -79,7 +79,7 @@ const suggestCropsPrompt = ai.definePrompt({
     output: { schema: SuggestCropsOutputSchema },
     prompt: `You are an expert agricultural advisor. Based on the provided location, suggest 3-4 crops that are suitable for a new farmer to grow.
     
-    Location: {{{location}}}
+    Location: {{location}}
 
     For each crop, provide its name, a brief reason for its suitability (considering climate, feasibility, and demand), and a predicted profitability rating (High, Medium, or Low).
     `
