@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Lottie from 'lottie-react';
-import { Camera, Upload, CheckCircle, AlertTriangle, Lightbulb, Loader } from 'lucide-react';
+import { Camera, Upload, CheckCircle, AlertTriangle, Lightbulb, Loader, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -182,7 +182,10 @@ export default function CropScannerPage() {
                     <div className="text-center text-destructive-foreground bg-destructive/80 p-6 rounded-lg">
                         <AlertTriangle className="mx-auto h-12 w-12 mb-4" />
                         <h3 className="font-semibold mb-2">Analysis Failed</h3>
-                        <p className="text-sm">{error}</p>
+                        <p className="text-sm mb-4">{error}</p>
+                        <Button onClick={handleScan} variant="secondary">
+                           <RefreshCw className="mr-2"/> Try Again
+                        </Button>
                     </div>
                   )}
                   {status === 'success' && result && (

@@ -28,6 +28,7 @@ export default function GuidePage() {
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  const [roadmapError, setRoadmapError] = useState<string | null>(null);
   
   const [loadingStatus, setLoadingStatus] = useState("Getting your location...");
   const { location, loading: locationLoading, error: locationError, fetchLocation } = useLocation();
@@ -65,14 +66,14 @@ export default function GuidePage() {
     if (!location?.name) return;
     setSelectedCrop(crop);
     setRoadmapLoading(true);
-    setSuggestionsError(null);
+    setRoadmapError(null);
     try {
       const result = await generateGrowthRoadmap({ location: location.name, cropType: crop.name });
       setRoadmap(result);
       setCurrentStep(2);
     } catch (error) {
       console.error('Failed to generate roadmap:', error);
-      setSuggestionsError('Could not generate the growth roadmap. Please try again.');
+      setRoadmapError('Could not generate the growth roadmap. The AI assistant might be busy. Please try again in a moment.');
     } finally {
       setRoadmapLoading(false);
     }
@@ -82,6 +83,7 @@ export default function GuidePage() {
     setCurrentStep(1);
     setSelectedCrop(null);
     setRoadmap(null);
+    setRoadmapError(null);
     if (location) {
         fetchSuggestions();
     } else {
@@ -89,12 +91,18 @@ export default function GuidePage() {
     }
   }
 
-  const handleRetry = () => {
+  const handleSuggestionsRetry = () => {
       if (!location) {
           fetchLocation();
       } else {
           fetchSuggestions();
       }
+  }
+
+  const handleRoadmapRetry = () => {
+    if (selectedCrop) {
+      handleSelectCrop(selectedCrop);
+    }
   }
   
   const ProfitabilityBadge = ({ level }: { level: 'High' | 'Medium' | 'Low' }) => {
@@ -111,10 +119,10 @@ export default function GuidePage() {
     )
   }
 
-  const LoadingIndicator = () => (
+  const LoadingIndicator = ({text}: {text?: string}) => (
      <div className="flex flex-col items-center justify-center min-h-[200px] gap-4">
         <Loader className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-muted-foreground">{suggestionsLoading ? loadingStatus : 'Fetching your location...'}</p>
+        <p className="text-muted-foreground">{text || (suggestionsLoading ? loadingStatus : 'Fetching your location...')}</p>
       </div>
   );
 
@@ -172,9 +180,11 @@ export default function GuidePage() {
                 
                 {!locationLoading && locationError && <ErrorDisplay error={locationError} onRetry={fetchLocation} />}
 
-                {location && !suggestionsLoading && suggestionsError && <ErrorDisplay error={suggestionsError} onRetry={fetchSuggestions} />}
+                {location && !suggestionsLoading && suggestionsError && <ErrorDisplay error={suggestionsError} onRetry={handleSuggestionsRetry} />}
+
+                {location && !suggestionsLoading && roadmapError && <ErrorDisplay error={roadmapError} onRetry={handleRoadmapRetry} />}
                 
-                {location && !suggestionsLoading && !suggestionsError && suggestions.length > 0 && (
+                {location && !suggestionsLoading && !suggestionsError && !roadmapError && suggestions.length > 0 && (
                   <div className="grid md:grid-cols-2 gap-4">
                     {suggestions.map((crop) => (
                       <motion.div
@@ -208,10 +218,7 @@ export default function GuidePage() {
           {currentStep === 2 && roadmap && selectedCrop && (
             <div>
                  {roadmapLoading ? (
-                    <div className="flex flex-col items-center justify-center min-h-[200px] gap-2">
-                        <Loader className="w-8 h-8 animate-spin text-primary" />
-                        <p className="text-muted-foreground">Generating your personalized roadmap...</p>
-                    </div>
+                    <LoadingIndicator text="Generating your personalized roadmap..."/>
                 ) : (
                 <>
                     <div className="text-center mb-8">
