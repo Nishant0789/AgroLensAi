@@ -60,7 +60,10 @@ export default function CropScannerPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
-        reset();
+        setStatus('idle');
+        setResult(null);
+        setOriginalResult(null);
+        setError(null);
       };
       reader.readAsDataURL(file);
     }
@@ -194,7 +197,7 @@ export default function CropScannerPage() {
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
-      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating' || status === 'error'} />
+      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating' } />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <Card className="glass-card">
