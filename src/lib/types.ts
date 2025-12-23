@@ -23,6 +23,6 @@ export type Alert = {
 export type WeatherData = {
   day: string;
   temp: number;
-  icon: 'sun' | 'cloud' | 'rain' | 'snow' | 'wind' | 'cloud-sun';
+  icon: 'sun' | 'cloud' | 'rain' | 'snow' | 'wind' | 'cloud-sun' | 'sunny' | 'partly-cloudy' | 'cloudy' | 'showers';
   description: string;
 };

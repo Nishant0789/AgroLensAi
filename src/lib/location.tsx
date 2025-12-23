@@ -1,6 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { getCoordinatesForCity } from '@/ai/flows/get-weather-forecast';
+
 
 type LocationData = {
   lat: number;
@@ -15,6 +17,7 @@ type LocationContextType = {
   loading: boolean;
   error: string | null;
   fetchLocation: () => void;
+  setLocation: (city: string) => Promise<void>;
 };
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -28,12 +31,12 @@ const GORAKHPUR_LOCATION: LocationData = {
 }
 
 export function LocationProvider({ children }: { children: ReactNode }) {
-  const [location, setLocation] = useState<LocationData | null>(null);
+  const [location, setLocationState] = useState<LocationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const setLocationData = (data: LocationData) => {
-    setLocation(data);
+    setLocationState(data);
     setLoading(false);
     setError(null);
   };
@@ -42,6 +45,25 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     setError(message);
     setLoading(false);
   }
+
+  const setManualLocation = useCallback(async (city: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+        const geoData = await getCoordinatesForCity(city);
+        setLocationData({
+            lat: geoData.latitude,
+            lon: geoData.longitude,
+            city: geoData.city,
+            country: geoData.country,
+            name: geoData.name,
+        });
+    } catch (err) {
+        console.error("Failed to set manual location:", err);
+        handleError(`Could not find location for "${city}". Please try another city.`);
+        // Don't fall back to Gorakhpur here, let the user retry.
+    }
+  }, []);
 
   const fetchLocation = useCallback(async () => {
     setLoading(true);
@@ -121,7 +143,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     fetchLocation();
   }, [fetchLocation]);
 
-  const value = { location, loading, error, fetchLocation };
+  const value = { location, loading, error, fetchLocation, setLocation: setManualLocation };
 
   return React.createElement(LocationContext.Provider, { value: value }, children);
 }
