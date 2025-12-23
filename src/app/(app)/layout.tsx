@@ -11,7 +11,7 @@ import { Chatbot } from '@/components/chatbot';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { LocationProvider } from '@/lib/location';
-import { useCollection, useUser, useFirestore } from '@/firebase';
+import { useCollection, useUser, useFirestore, useAuth } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { initializeFirebase } from '@/firebase';
@@ -43,7 +43,7 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading: userLoading } = useUser();
+  const { user, loading: userLoading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -62,18 +62,6 @@ export default function AppLayout({
       </div>
     );
   }
-
-  const signOut = async () => {
-    try {
-      const { auth } = initializeFirebase();
-      if (auth) {
-        await auth.signOut();
-        router.push('/auth');
-      }
-    } catch (error) {
-      console.error("Error signing out: ", error);
-    }
-  };
 
   return (
       <LocationProvider user={{...user, firestore: firestore}}>
