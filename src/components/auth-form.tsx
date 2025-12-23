@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/auth.tsx';
-import { Chrome } from 'lucide-react';
+import { Chrome, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -70,7 +71,11 @@ export default function AuthForm() {
   
   return (
     <div className="w-full max-w-md mx-auto glass-card overflow-hidden">
-      <div className="p-8 relative h-[550px]">
+      <div className="p-8 pt-16 relative h-[550px]">
+        <Link href="/" className="absolute top-6 left-6 flex items-center text-sm text-muted-foreground hover:text-primary transition-colors">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Home
+        </Link>
         <AnimatePresence initial={false} custom={direction}>
           {isLogin ? (
             <motion.div
@@ -81,7 +86,7 @@ export default function AuthForm() {
               animate="center"
               exit="exit"
               transition={{ type: 'tween', duration: 0.5 }}
-              className="absolute w-full top-8 left-0 px-8"
+              className="absolute w-full top-20 left-0 px-8"
             >
               <h2 className="text-2xl font-bold font-headline text-center mb-2">Welcome Back</h2>
               <p className="text-center text-muted-foreground mb-6">Sign in to continue to AgroLens AI.</p>
@@ -127,7 +132,7 @@ export default function AuthForm() {
               animate="center"
               exit="exit"
               transition={{ type: 'tween', duration: 0.5 }}
-              className="absolute w-full top-8 left-0 px-8"
+              className="absolute w-full top-20 left-0 px-8"
             >
               <h2 className="text-2xl font-bold font-headline text-center mb-2">Create an Account</h2>
               <p className="text-center text-muted-foreground mb-6">Start your journey with AgroLens AI.</p>
