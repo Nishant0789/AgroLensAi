@@ -236,7 +236,7 @@ export default function CropScannerPage() {
                 </Button>
               )}
               
-              {status !== 'idle' && status !== 'analyzing' && status !== 'translating' && (
+              {status !== 'idle' && !isProcessing && (
                   <Button onClick={resetState} variant="outline" className="w-full">
                       <RefreshCw className="mr-2" /> Scan Another Crop
                   </Button>
