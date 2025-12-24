@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth.tsx';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, orderBy, query } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 type Notification = {
   id: string;
@@ -75,7 +76,7 @@ export default function AlertsPage() {
             {notifications.map((alert) => (
                 <motion.div key={alert.id} variants={FADE_IN_ITEM}>
                     <AccordionItem value={alert.id} className="border-none">
-                        <Card className="glass-card hover:shadow-lg transition-shadow mb-4">
+                        <CardSpotlight className="mb-4 p-0">
                             <AccordionTrigger className="p-4 w-full cursor-pointer [&[data-state=open]>svg]:text-primary">
                                 <div className="flex items-center justify-between w-full">
                                     <div className="flex items-center gap-4">
@@ -103,20 +104,20 @@ export default function AlertsPage() {
                                     <p className="text-sm text-muted-foreground bg-secondary p-3 rounded-md whitespace-pre-line">{alert.preventiveMeasures}</p>
                                 </div>
                             </AccordionContent>
-                        </Card>
+                        </CardSpotlight>
                     </AccordionItem>
                 </motion.div>
             ))}
           </Accordion>
         ) : (
           !loading && <motion.div variants={FADE_IN_ITEM}>
-             <Card className="glass-card">
+             <CardSpotlight>
                  <CardContent className="p-10 text-center text-muted-foreground">
                     <Bell className="mx-auto h-12 w-12 mb-4" />
                     <h3 className="font-semibold">All Clear!</h3>
                     <p>No nearby disease alerts at the moment.</p>
                  </CardContent>
-             </Card>
+             </CardSpotlight>
           </motion.div>
         )}
       </motion.div>

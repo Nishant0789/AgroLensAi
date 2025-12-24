@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { translateContent } from '@/ai/flows/translate-content';
 import { type TranslateContentInput } from '@/ai/flows/translate-content-types';
+import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 type ScanResult = AnalyzeCropOutput;
 
@@ -126,7 +127,6 @@ export default function CropScannerPage() {
                 longitude,
                 disease: analysisResult.disease,
                 sourceUserId: user.uid,
-                firestore: firestore,
               });
               toast({
                 title: "Community Alert Sent",
@@ -202,7 +202,7 @@ export default function CropScannerPage() {
       <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating'} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
-        <Card className="glass-card">
+        <CardSpotlight>
           <CardContent className="p-6 flex flex-col items-center justify-center min-h-[300px]">
             {imagePreview ? (
               <div className="relative w-full aspect-video">
@@ -235,7 +235,7 @@ export default function CropScannerPage() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </CardSpotlight>
 
         <AnimatePresence mode="wait">
             <motion.div
@@ -244,7 +244,7 @@ export default function CropScannerPage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
             >
-              <Card className="glass-card min-h-[300px]">
+              <CardSpotlight className="min-h-[300px]">
                 <CardContent className="p-6 flex flex-col items-center justify-center h-full min-h-[300px]">
                   {status === 'idle' && (
                      <div className="text-center text-muted-foreground">
@@ -347,7 +347,7 @@ export default function CropScannerPage() {
                     </div>
                   )}
                 </CardContent>
-              </Card>
+              </CardSpotlight>
             </motion.div>
         </AnimatePresence>
       </div>

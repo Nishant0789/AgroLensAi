@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import AuthForm from '@/components/auth-form';
 import Logo from '@/components/logo';
 import { useAuth } from '@/lib/auth.tsx';
+import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 export default function AuthPage() {
   const { user, loading } = useAuth();
@@ -36,7 +37,9 @@ export default function AuthPage() {
           <Logo />
         </div>
         
-        <AuthForm />
+        <CardSpotlight className="w-full max-w-md mx-auto overflow-hidden p-0">
+          <AuthForm />
+        </CardSpotlight>
       </div>
     </div>
   );

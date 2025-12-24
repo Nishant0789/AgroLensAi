@@ -11,6 +11,7 @@ import { useLocation } from '@/lib/location';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { translateContent } from '@/ai/flows/translate-content';
 import { type TranslateContentInput } from '@/ai/flows/translate-content-types';
+import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 
 type CropSuggestion = PersonalizedGuideOutput['suggestions'][0];
@@ -229,7 +230,7 @@ export default function GuidePage() {
 
   return (
     <div className="container mx-auto max-w-4xl space-y-8">
-       <Card className="glass-card">
+       <CardSpotlight>
           <CardContent className="p-6">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -256,7 +257,7 @@ export default function GuidePage() {
               </ol>
             </div>
           </CardContent>
-        </Card>
+        </CardSpotlight>
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -267,7 +268,7 @@ export default function GuidePage() {
           transition={{ duration: 0.3 }}
         >
           {currentStep === 1 && (
-            <Card className="glass-card">
+            <CardSpotlight>
               <CardHeader>
                 <CardTitle>AI Crop Suggestions for Your Area</CardTitle>
                 {location && !locationLoading && <CardDescription>Based on your location: <span className="font-semibold text-primary">{location.name}</span></CardDescription>}
@@ -310,12 +311,12 @@ export default function GuidePage() {
                   </div>
                 )}
               </CardContent>
-            </Card>
+            </CardSpotlight>
           )}
           
           {currentStep === 2 && (
             <div>
-                 <Card className="glass-card mb-8">
+                 <CardSpotlight className="mb-8">
                     <CardContent className="p-6 text-center">
                         {loading && <LoadingIndicator text="Translating roadmap..."/>}
                         {error && !loading && <ErrorDisplay error={error} onRetry={() => selectedCrop && handleSelectCrop(selectedCrop)}/>}
@@ -326,7 +327,7 @@ export default function GuidePage() {
                             </>
                         )}
                     </CardContent>
-                 </Card>
+                 </CardSpotlight>
 
                     {selectedRoadmap && !loading && (
                         <div className="relative">
@@ -339,10 +340,7 @@ export default function GuidePage() {
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.1 }}
                             >
-                                <div className="absolute left-0 top-3 flex items-center justify-center w-8 h-8 bg-primary rounded-full text-primary-foreground font-bold">
-                                {index + 1}
-                                </div>
-                                <Card className="ml-4 glass-card shadow-md">
+                                <CardSpotlight className="ml-4">
                                 <CardHeader>
                                     <CardTitle>{item.title}</CardTitle>
                                     <CardDescription className="flex items-center gap-2 pt-1">
@@ -353,7 +351,7 @@ export default function GuidePage() {
                                 <CardContent>
                                     <p className="whitespace-pre-line text-sm text-muted-foreground">{item.description}</p>
                                 </CardContent>
-                                </Card>
+                                </CardSpotlight>
                             </motion.div>
                             ))}
                         </div>

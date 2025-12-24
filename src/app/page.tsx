@@ -8,6 +8,7 @@ import Logo from '@/components/logo';
 import { useAuth } from '@/lib/auth.tsx';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 const featureVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -101,18 +102,19 @@ export default function HomePage() {
               {features.map((feature, i) => (
                 <motion.div
                   key={feature.title}
-                  className="glass-card p-6 flex flex-col items-center text-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
                   custom={i}
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true, amount: 0.5 }}
                   variants={featureVariants}
                 >
-                  <div className="p-4 bg-primary/10 rounded-full mb-4">
-                    <feature.icon className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-headline font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
+                  <CardSpotlight className="p-6 flex flex-col items-center text-center transition-all duration-300 h-full">
+                    <div className="p-4 bg-primary/10 rounded-full mb-4">
+                      <feature.icon className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-headline font-semibold mb-2">{feature.title}</h3>
+                    <p className="text-muted-foreground">{feature.description}</p>
+                  </CardSpotlight>
                 </motion.div>
               ))}
             </div>

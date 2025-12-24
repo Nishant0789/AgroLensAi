@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/auth.tsx';
 import { useCollection } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 const weatherIconMap: { [key: string]: React.ElementType } = {
     sun: Sun,
@@ -77,7 +78,7 @@ function WeatherCard() {
 
   return (
     <>
-      <Card className="glass-card">
+      <CardSpotlight>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>7-Day Forecast</CardTitle>
           {location && !locationLoading && (
@@ -145,7 +146,7 @@ function WeatherCard() {
             </>
           )}
         </CardContent>
-      </Card>
+      </CardSpotlight>
       
       <Dialog open={isLocationModalOpen} onOpenChange={setIsLocationModalOpen}>
         <DialogContent>
@@ -211,7 +212,7 @@ function FieldJournal() {
   };
 
   return (
-    <Card className="glass-card mt-6">
+    <CardSpotlight className="mt-6">
       <CardHeader>
         <CardTitle>Field Journal (Recent Scans)</CardTitle>
       </CardHeader>
@@ -268,7 +269,7 @@ function FieldJournal() {
             </Table>
         )}
       </CardContent>
-    </Card>
+    </CardSpotlight>
   );
 }
 
