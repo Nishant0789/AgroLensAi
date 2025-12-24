@@ -245,7 +245,7 @@ export default function CropScannerPage() {
 
             {imagePreview && status === 'idle' && (
               <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={handleScan} disabled={status === 'analyzing' || status === 'translating' || subStatus !== 'idle' || cooldown > 0} className="w-full">
+                 <Button onClick={handleScan} disabled={isProcessing || subStatus !== 'idle' || cooldown > 0} className="w-full">
                     {isProcessing ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
                      cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
