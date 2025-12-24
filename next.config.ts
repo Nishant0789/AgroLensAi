@@ -30,6 +30,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  devIndicators: {
+    buildActivity: false,
+  },
+  // The following line is required for development in a cloud environment
+  // and can be removed when deploying to production.
+  skipMiddlewareUrlNormalize: true,
 };
 
 export default nextConfig;
