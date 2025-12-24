@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -48,7 +49,6 @@ export default function CropScannerPage() {
   const firestore = useFirestore();
   const [cooldown, setCooldown] = useState(0);
   const [language, setLanguage] = useState('English');
-  const isProcessing = status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert';
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -77,7 +77,7 @@ export default function CropScannerPage() {
   };
 
   const handleScan = async () => {
-    if (!imagePreview || !user || cooldown > 0) return;
+    if (!imagePreview || !user || cooldown > 0 || status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert') return;
     setStatus('analyzing');
     setSubStatus('idle');
     setError(null);
@@ -102,7 +102,7 @@ export default function CropScannerPage() {
         const translatedResult = await translateContent({
             content: analysisResult,
             targetLanguage: language,
-        });
+        } as TranslateContentInput);
         setResult(translatedResult);
       }
       
@@ -185,7 +185,7 @@ export default function CropScannerPage() {
         const translatedResult = await translateContent({
             content: originalResult,
             targetLanguage: lang,
-        });
+        } as TranslateContentInput);
         setResult(translatedResult);
     } catch(err) {
         console.error("Error translating content:", err);
@@ -208,6 +208,7 @@ export default function CropScannerPage() {
   }
 
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
+  const isProcessing = status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert';
 
   return (
     <div className="container mx-auto max-w-4xl">
@@ -383,3 +384,5 @@ export default function CropScannerPage() {
     </div>
   );
 }
+
+    
