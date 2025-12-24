@@ -289,7 +289,8 @@ function MyFieldsAndTasks() {
     const tasksQuery = user ? query(collection(firestore, `users/${user.uid}/tasks`), orderBy('date', 'asc')) : null;
     const { data: tasks, loading: tasksLoading } = useCollection<Task>(tasksQuery);
     
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [generatingFieldId, setGeneratingFieldId] = useState<string | null>(null);
+    const [isRefreshingAll, setIsRefreshingAll] = useState(false);
 
     // Group tasks by field ID for easy lookup
     const tasksByField = useMemo(() => {
@@ -312,7 +313,7 @@ function MyFieldsAndTasks() {
 
     const generateTasksForField = async (field: Field) => {
         if (!user || !location) return;
-        setIsGenerating(true);
+        setGeneratingFieldId(field.id);
         try {
             const result = await generateTaskTimeline({
                 crop: field.crop,
@@ -332,9 +333,18 @@ function MyFieldsAndTasks() {
         } catch (error) {
             console.error("Failed to generate tasks:", error);
         } finally {
-            setIsGenerating(false);
+            setGeneratingFieldId(null);
         }
     };
+    
+    const refreshAllTasks = async () => {
+        if (!fields) return;
+        setIsRefreshingAll(true);
+        for (const field of fields) {
+            await generateTasksForField(field);
+        }
+        setIsRefreshingAll(false);
+    }
 
     const handleToggleComplete = async (task: Task) => {
         if (!user) return;
@@ -352,9 +362,9 @@ function MyFieldsAndTasks() {
                     <CardDescription>Manage your fields and view their AI-generated timelines.</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button onClick={() => fields?.forEach(generateTasksForField)} disabled={isGenerating || fieldsLoading || !fields?.length} size="sm" variant="secondary">
-                        {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <Calendar className="mr-2" />}
-                        {isGenerating ? 'Generating...' : 'Refresh All Tasks'}
+                    <Button onClick={refreshAllTasks} disabled={isRefreshingAll || fieldsLoading || !fields?.length} size="sm" variant="secondary">
+                        {isRefreshingAll ? <Loader2 className="animate-spin mr-2" /> : <Calendar className="mr-2" />}
+                        {isRefreshingAll ? 'Refreshing...' : 'Refresh All Tasks'}
                     </Button>
                     <AddFieldModal />
                 </div>
@@ -372,6 +382,7 @@ function MyFieldsAndTasks() {
                         {fields?.map(field => {
                             const fieldTasks = tasksByField[field.id] || [];
                             const nextAction = getNextAction(field.id);
+                            const isGenerating = generatingFieldId === field.id;
                             return (
                                 <AccordionItem value={field.id} key={field.id} className="border-none">
                                     <CardSpotlight className="p-0">
@@ -426,7 +437,7 @@ function MyFieldsAndTasks() {
                                                     <p className="mb-2">No tasks found for this field.</p>
                                                     <Button onClick={() => generateTasksForField(field)} size="sm" disabled={isGenerating}>
                                                         {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <Calendar className="mr-2" />}
-                                                        Generate Timeline
+                                                        {isGenerating ? 'Generating...' : 'Generate Timeline'}
                                                     </Button>
                                                 </div>
                                             )}
@@ -513,7 +524,7 @@ function ScanHistoryCard() {
                     </DialogHeader>
                     <div className="grid md:grid-cols-2 gap-6 mt-4 max-h-[70vh] overflow-y-auto">
                         <div className="relative aspect-video">
-                            <Image src={selectedScan.imageUrl} alt="Scanned crop" layout="fill" objectFit="contain" className="rounded-md" />
+                            <Image src={selectedScan.imageUrl} alt="Scanned crop" fill={true} objectFit="contain" className="rounded-md" />
                         </div>
                         <div className="space-y-4">
                             <Accordion type="single" collapsible className="w-full" defaultValue="description">
@@ -601,3 +612,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
