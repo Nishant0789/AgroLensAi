@@ -22,7 +22,6 @@ import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 type ScanResult = AnalyzeCropOutput;
 type Status = 'idle' | 'analyzing' | 'translating' | 'success' | 'error';
-type SubStatus = 'idle' | 'sendingAlert';
 
 const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: string; onLanguageChange: (lang: string) => void; disabled: boolean }) => (
     <div className="flex items-center justify-center gap-2 mb-4">
@@ -39,7 +38,6 @@ const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: 
 export default function CropScannerPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [subStatus, setSubStatus] = useState<SubStatus>('idle');
   const [result, setResult] = useState<ScanResult | null>(null);
   const [originalResult, setOriginalResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +46,7 @@ export default function CropScannerPage() {
   const { user } = useAuth();
   const firestore = useFirestore();
   const [cooldown, setCooldown] = useState(0);
+  const [isAlerting, setIsAlerting] = useState(false);
   const [language, setLanguage] = useState('English');
 
   useEffect(() => {
@@ -67,7 +66,6 @@ export default function CropScannerPage() {
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
         setStatus('idle');
-        setSubStatus('idle');
         setResult(null);
         setOriginalResult(null);
         setError(null);
@@ -80,25 +78,22 @@ export default function CropScannerPage() {
     if (!imagePreview || !user) return;
 
     setStatus('analyzing');
-    setSubStatus('idle');
     setError(null);
     setResult(null);
     setOriginalResult(null);
     setCooldown(10); // Start 10-second cooldown
     
     try {
-      // Always get original analysis in English for consistent translation base
       const analysisResult = await analyzeCrop({
         photoDataUri: imagePreview,
         language: 'English',
       });
       
-      setOriginalResult(analysisResult); // Save the original English result
+      setOriginalResult(analysisResult); 
 
       if (language === 'English') {
         setResult(analysisResult);
       } else {
-        // If the current language is not English, translate the result immediately
         setStatus('translating');
         const translatedResult = await translateContent({
             content: analysisResult,
@@ -109,7 +104,6 @@ export default function CropScannerPage() {
       
       setStatus('success');
 
-      // Save scan to Firestore
       try {
         const scansCollection = collection(firestore, `users/${user.uid}/scans`);
         await addDoc(scansCollection, {
@@ -123,9 +117,8 @@ export default function CropScannerPage() {
           console.error("Failed to save scan history:", e);
       }
       
-      // Trigger geo-location alert if a disease was detected
       if (analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
-        setSubStatus('sendingAlert');
+        setIsAlerting(true);
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
@@ -148,7 +141,7 @@ export default function CropScannerPage() {
                 variant: 'destructive'
                })
             } finally {
-                setSubStatus('idle');
+                setIsAlerting(false);
             }
           },
           (error) => {
@@ -158,7 +151,7 @@ export default function CropScannerPage() {
                 description: "Could not get your location to send an alert.",
                 variant: 'destructive'
             });
-            setSubStatus('idle');
+            setIsAlerting(false);
           }
         );
       }
@@ -199,7 +192,6 @@ export default function CropScannerPage() {
   const reset = () => {
       setImagePreview(null);
       setStatus('idle');
-      setSubStatus('idle');
       setResult(null);
       setOriginalResult(null);
       setError(null);
@@ -209,6 +201,7 @@ export default function CropScannerPage() {
   }
 
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
+  const isProcessing = status === 'analyzing' || status === 'translating';
 
   return (
     <div className="container mx-auto max-w-4xl">
@@ -221,7 +214,7 @@ export default function CropScannerPage() {
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
-      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating'} />
+      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={isProcessing} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <CardSpotlight>
@@ -247,13 +240,12 @@ export default function CropScannerPage() {
 
             {imagePreview && (
               <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={handleScan} disabled={status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert' || cooldown > 0} className="w-full">
+                 <Button onClick={handleScan} disabled={isProcessing || cooldown > 0} className="w-full">
                     {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
                      status === 'translating' ? <><Loader className="animate-spin mr-2"/>Translating...</> :
-                     subStatus === 'sendingAlert' ? <><Share2 className="animate-pulse mr-2"/>Sending Alert...</> :
                      cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
-                <Button onClick={reset} variant="outline" className="w-full" disabled={status === 'analyzing' || status === 'translating'}>
+                <Button onClick={reset} variant="outline" className="w-full" disabled={isProcessing}>
                     <Upload className="mr-2" /> Upload New Image
                 </Button>
               </div>
@@ -275,17 +267,20 @@ export default function CropScannerPage() {
                         <p>Analysis results will appear here.</p>
                      </div>
                   )}
-                  {status === 'analyzing' && (
+                  {isProcessing && (
                     <div className="text-center">
-                      <Lottie animationData={analyzingAnimation} style={{ height: 150 }} />
-                      <p className="font-semibold text-primary">Analyzing image...</p>
-                      <p className="text-sm text-muted-foreground">This may take a moment.</p>
-                    </div>
-                  )}
-                  {status === 'translating' && (
-                    <div className="text-center">
-                      <Loader className="w-12 h-12 animate-spin text-primary mb-4" />
-                      <p className="font-semibold text-primary">Translating to {language}...</p>
+                      {status === 'analyzing' ? (
+                         <>
+                           <Lottie animationData={analyzingAnimation} style={{ height: 150 }} />
+                           <p className="font-semibold text-primary">Analyzing image...</p>
+                           <p className="text-sm text-muted-foreground">This may take a moment.</p>
+                         </>
+                      ) : (
+                         <>
+                           <Loader className="w-12 h-12 animate-spin text-primary mb-4" />
+                           <p className="font-semibold text-primary">Translating to {language}...</p>
+                         </>
+                      )}
                     </div>
                   )}
                   {status === 'error' && (
@@ -293,8 +288,8 @@ export default function CropScannerPage() {
                         <AlertTriangle className="mx-auto h-12 w-12 mb-4" />
                         <h3 className="font-semibold mb-2">Analysis Failed</h3>
                         <p className="text-sm mb-4">{error}</p>
-                        <Button onClick={() => handleScan()} variant="secondary">
-                           <RefreshCw className="mr-2"/> Try Again
+                        <Button onClick={() => handleScan()} variant="secondary" disabled={cooldown > 0}>
+                           {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2"/> Try Again</>}
                         </Button>
                     </div>
                   )}
@@ -310,7 +305,7 @@ export default function CropScannerPage() {
                            {isHealthy ? 'Diagnosis: Healthy' : `Diagnosis: ${result.disease}`}
                          </h3>
                          <p className="text-sm text-muted-foreground mt-1">{result.description}</p>
-                         {subStatus === 'sendingAlert' && (
+                         {isAlerting && (
                              <div className="flex items-center gap-2 text-sm text-blue-500 mt-2">
                                  <Share2 className="w-4 h-4 animate-pulse"/>
                                  <span>Notifying nearby farmers...</span>
