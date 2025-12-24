@@ -111,7 +111,7 @@ export default function HomePage() {
                   <CardSpotlight
                     className="p-6 flex flex-col items-start text-left transition-all duration-300 h-full">
                     <div className="flex items-center gap-4 mb-4">
-                        <div className="p-3 bg-primary/10 rounded-full">
+                        <div className="p-3 bg-secondary rounded-full">
                         <feature.icon className="w-6 h-6 text-primary" />
                         </div>
                         <h3 className="text-xl font-headline font-semibold">{feature.title}</h3>
