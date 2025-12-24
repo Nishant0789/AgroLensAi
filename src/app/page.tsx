@@ -9,8 +9,6 @@ import { useAuth } from '@/lib/auth.tsx';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { CardSpotlight } from '@/components/ui/card-spotlight';
-import { SplineScene } from '@/components/ui/splite';
-import { Spotlight } from '@/components/ui/spotlight';
 
 const featureVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -64,40 +62,26 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1">
-        <section className="relative flex items-center justify-center h-screen overflow-hidden bg-black/[0.96]">
-            <Spotlight
-                className="-top-40 left-0 md:left-60 md:-top-20"
-                fill="white"
-            />
-            <div className="flex flex-col md:flex-row h-full container mx-auto items-center">
-                {/* Left content */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                    className="flex-1 p-8 relative z-10 flex flex-col justify-center text-center md:text-left"
-                >
-                    <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-50 to-neutral-400">
-                      Welcome to AgroLens AI
-                    </h1>
-                    <p className="mt-4 text-neutral-300 max-w-lg mx-auto md:mx-0">
-                      Revolutionizing agriculture with the power of AI. Your digital partner for a healthier, more productive farm.
-                    </p>
-                    <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-primary-foreground mt-8 self-center md:self-start">
-                        <Link href="/auth">
-                            Get Started <ArrowRight className="ml-2" />
-                        </Link>
-                    </Button>
-                </motion.div>
-
-                {/* Right content */}
-                <div className="flex-1 relative w-full h-1/2 md:h-full">
-                    <SplineScene
-                        scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
-                        className="w-full h-full"
-                    />
-                </div>
-            </div>
+        <section className="relative flex items-center justify-center h-screen overflow-hidden bg-background/5">
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10" />
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="text-center p-8 relative z-10"
+            >
+                <h1 className="text-4xl md:text-6xl font-bold font-headline text-primary">
+                    Welcome to AgroLens AI
+                </h1>
+                <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+                    Revolutionizing agriculture with the power of AI. Your digital partner for a healthier, more productive farm.
+                </p>
+                <Button size="lg" asChild className="mt-8">
+                    <Link href="/auth">
+                        Get Started <ArrowRight className="ml-2" />
+                    </Link>
+                </Button>
+            </motion.div>
         </section>
 
         <section id="features" className="py-20 bg-secondary/50">
