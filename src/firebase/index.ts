@@ -36,12 +36,17 @@ function initializeFirebase() {
       
       if (!persistenceEnabled) {
         try {
-            enableIndexedDbPersistence(firestore);
-            persistenceEnabled = true;
+            enableIndexedDbPersistence(firestore)
+              .then(() => {
+                persistenceEnabled = true;
+              })
+              .catch((error: any) => {
+                  if (error.code !== 'failed-precondition') {
+                      console.error("Firebase persistence error:", error);
+                  }
+              });
         } catch (error: any) {
-            if (error.code !== 'failed-precondition') {
-                console.error("Firebase persistence error:", error);
-            }
+            console.error("Error enabling persistence:", error);
         }
       }
 
@@ -52,12 +57,17 @@ function initializeFirebase() {
       
       if (!persistenceEnabled) {
           try {
-              enableIndexedDbPersistence(firestore);
-              persistenceEnabled = true;
+              enableIndexedDbPersistence(firestore)
+                .then(() => {
+                  persistenceEnabled = true;
+                })
+                .catch((error: any) => {
+                    if (error.code !== 'failed-precondition') {
+                        console.error("Firebase persistence error:", error);
+                    }
+                });
           } catch (error: any) {
-              if (error.code !== 'failed-precondition') {
-                  console.error("Firebase persistence error:", error);
-              }
+             console.error("Error enabling persistence:", error);
           }
       }
     }
