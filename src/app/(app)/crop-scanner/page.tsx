@@ -48,6 +48,7 @@ export default function CropScannerPage() {
   const firestore = useFirestore();
   const [cooldown, setCooldown] = useState(0);
   const [language, setLanguage] = useState('English');
+  const isProcessing = status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert';
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -76,7 +77,7 @@ export default function CropScannerPage() {
   };
 
   const handleScan = async () => {
-    if (!imagePreview || !user || cooldown > 0) return;
+    if (!imagePreview || !user || cooldown > 0 || isProcessing) return;
     setStatus('analyzing');
     setSubStatus('idle');
     setError(null);
@@ -207,7 +208,6 @@ export default function CropScannerPage() {
   }
 
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
-  const isProcessing = status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert';
 
   return (
     <div className="container mx-auto max-w-4xl">
@@ -248,6 +248,7 @@ export default function CropScannerPage() {
               <div className="flex flex-col w-full gap-2 mt-4">
                  <Button onClick={handleScan} disabled={isProcessing || !user || cooldown > 0} className="w-full">
                     {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
+                     status === 'translating' ? <><Loader className="animate-spin mr-2"/>Translating...</> :
                      subStatus === 'sendingAlert' ? <><Share2 className="animate-pulse mr-2"/>Sending Alert...</> :
                      cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
@@ -382,3 +383,5 @@ export default function CropScannerPage() {
     </div>
   );
 }
+
+    
