@@ -8,31 +8,10 @@
 
 import { ai } from '@/ai/genkit';
 import { TranslateContentInputSchema, TranslateContentOutputSchema, type TranslateContentInput, type TranslateContentOutput } from './translate-content-types';
-import Handlebars from 'handlebars';
-
-// Register the Handlebars helper before defining the prompt that uses it.
-Handlebars.registerHelper('JSONstringify', function(context) {
-    return JSON.stringify(context, null, 2);
-});
 
 export async function translateContent(input: TranslateContentInput): Promise<TranslateContentOutput> {
   return translateContentFlow(input);
 }
-
-const prompt = ai.definePrompt({
-  name: 'translateContentPrompt',
-  input: { schema: TranslateContentInputSchema },
-  output: { schema: TranslateContentOutputSchema },
-  prompt: `Translate all user-facing text values in the following JSON object to {{targetLanguage}}. Maintain the original JSON structure and key names exactly.
-
-  JSON to translate:
-  {{{JSONstringify content}}}
-  `,
-  model: 'googleai/gemini-2.5-flash-lite',
-  config: {
-      temperature: 0.2 // Lower temperature for more deterministic translation
-  }
-});
 
 const translateContentFlow = ai.defineFlow(
   {
@@ -40,8 +19,24 @@ const translateContentFlow = ai.defineFlow(
     inputSchema: TranslateContentInputSchema,
     outputSchema: TranslateContentOutputSchema,
   },
-  async (input) => {
-    const { output } = await prompt(input);
+  async ({ content, targetLanguage }) => {
+    const contentString = JSON.stringify(content, null, 2);
+
+    const { output } = await ai.generate({
+        prompt: `Translate all user-facing text values in the following JSON object to ${targetLanguage}. Maintain the original JSON structure and key names exactly.
+
+        JSON to translate:
+        ${contentString}
+        `,
+        model: 'googleai/gemini-2.5-flash-lite',
+        output: {
+            schema: TranslateContentOutputSchema,
+        },
+        config: {
+            temperature: 0.2 // Lower temperature for more deterministic translation
+        }
+    });
+
     return output!;
   }
 );
