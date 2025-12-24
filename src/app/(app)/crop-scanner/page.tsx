@@ -11,7 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import analyzingAnimation from '../../../../public/lottie/analyzing.json';
 import { alertNearbyDiseases } from '@/ai/flows/geo-location-alerts';
 import { analyzeCrop, type AnalyzeCropOutput } from '@/ai/ai-crop-scanner';
-import { useAuth, useFirestore } from '@/firebase';
+import { useFirestore } from '@/firebase';
+import { useAuth } from '@/lib/auth.tsx';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -230,7 +231,7 @@ export default function CropScannerPage() {
                     }
                     handleScan();
                   }} 
-                  disabled={cooldown > 0}
+                  disabled={cooldown > 0 || !user}
                   className="w-full relative z-50 bg-primary hover:opacity-90"
                 >
                   {cooldown > 0 ? `Wait ${cooldown}s...` : 'Scan Crop'}
@@ -365,3 +366,5 @@ export default function CropScannerPage() {
     </div>
   );
 }
+
+    
