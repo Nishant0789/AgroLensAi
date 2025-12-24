@@ -108,8 +108,7 @@ export default function HomePage() {
                   viewport={{ once: true, amount: 0.5 }}
                   variants={featureVariants}
                 >
-                  <CardSpotlight 
-                    color="hsl(var(--muted) / 0.1)"
+                  <CardSpotlight
                     className="p-6 flex flex-col items-center text-center transition-all duration-300 h-full">
                     <div className="p-4 bg-primary/10 rounded-full mb-4">
                       <feature.icon className="w-8 h-8 text-primary" />
