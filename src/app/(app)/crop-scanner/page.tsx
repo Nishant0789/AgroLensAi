@@ -42,58 +42,46 @@ export default function CropScannerPage() {
   const [originalResult, setOriginalResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [language, setLanguage] = useState('English');
-  const [cooldown, setCooldown] = useState(0);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const firestore = useFirestore();
 
-  // Cooldown timer effect
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (cooldown > 0) {
-      timer = setInterval(() => {
-        setCooldown(prev => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [cooldown]);
-
-  const resetState = useCallback(() => {
+  const resetState = () => {
     setImagePreview(null);
     setStatus('idle');
     setIsAlerting(false);
     setResult(null);
     setOriginalResult(null);
     setError(null);
-    setCooldown(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, []);
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      resetState(); // Reset everything first
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
+        setStatus('idle');
+        setResult(null);
+        setOriginalResult(null);
+        setError(null);
+        setIsAlerting(false);
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleScan = async () => {
-    if (!imagePreview || !user) return;
-    if (status === 'analyzing' || status === 'translating' || cooldown > 0) return;
+    if (!imagePreview || !user || status === 'analyzing' || status === 'translating') return;
     
     setStatus('analyzing');
     setError(null);
     setResult(null);
     setOriginalResult(null);
-    setCooldown(10);
     
     try {
       const analysisResult = await analyzeCrop({
@@ -104,11 +92,10 @@ export default function CropScannerPage() {
       if (!analysisResult || !analysisResult.disease) {
         throw new Error("The AI model did not return a valid analysis. Please try a different image.");
       }
-
+      
       setOriginalResult(analysisResult); 
       setResult(analysisResult); // Show English result immediately
 
-      // Translate if the current language is not English
       if (language !== 'English') {
         setStatus('translating');
         const translatedResult = await translateContent({
@@ -120,18 +107,14 @@ export default function CropScannerPage() {
       
       setStatus('success');
 
-      // --- Post-analysis async tasks ---
-
-      // 1. Save to Firestore (don't wait for it)
       addDoc(collection(firestore, `users/${user.uid}/scans`), {
         userId: user.uid,
-        imageUrl: imagePreview, // This can be a large string, consider storage implications
+        imageUrl: imagePreview,
         disease: analysisResult.disease,
         solution: analysisResult.organicSolution,
         createdAt: serverTimestamp(),
       }).catch(e => console.error("Failed to save scan history:", e));
       
-      // 2. Send community alert if needed (don't wait for it)
       if (analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
         setIsAlerting(true);
         navigator.geolocation.getCurrentPosition(
@@ -186,13 +169,12 @@ export default function CropScannerPage() {
         console.error("Error translating content:", err);
         setError("Failed to translate the result. Please try again.");
     } finally {
-        setStatus('success'); // Return to success state even if translation fails
+        setStatus('success');
     }
   };
 
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
   const isProcessing = status === 'analyzing' || status === 'translating';
-  const canScan = !isProcessing && cooldown === 0;
 
   return (
     <div className="container mx-auto max-w-4xl">
@@ -231,8 +213,8 @@ export default function CropScannerPage() {
               )}
 
               {imagePreview && (status === 'idle' || status === 'error') && (
-                <Button onClick={handleScan} disabled={!canScan} className="w-full">
-                    {cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
+                <Button onClick={handleScan} disabled={isProcessing} className="w-full">
+                    Scan Crop
                 </Button>
               )}
               
@@ -280,8 +262,8 @@ export default function CropScannerPage() {
                         <AlertTriangle className="mx-auto h-12 w-12 mb-4" />
                         <h3 className="font-semibold mb-2">Analysis Failed</h3>
                         <p className="text-sm mb-4">{error}</p>
-                        <Button onClick={handleScan} variant="secondary" disabled={!canScan}>
-                           {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2"/> Try Again</>}
+                        <Button onClick={handleScan} variant="secondary">
+                            <RefreshCw className="mr-2"/> Try Again
                         </Button>
                     </div>
                   )}
