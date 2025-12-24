@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const CardSpotlight = ({
   children,
   radius = 350,
-  color = "hsl(var(--muted) / 0.1)",
+  color = "rgba(128, 128, 128, 0.15)",
   className,
   ...props
 }: {
@@ -43,6 +43,7 @@ export const CardSpotlight = ({
       onMouseLeave={handleMouseLeave}
       {...props}
     >
+       <div className="relative z-10">{children}</div>
       <motion.div
         className="pointer-events-none absolute z-0 -inset-px rounded-lg opacity-0 transition duration-300 group-hover/spotlight:opacity-100"
         style={{
@@ -68,7 +69,6 @@ export const CardSpotlight = ({
           />
         )}
       </motion.div>
-      <div className="relative z-10">{children}</div>
     </div>
   );
 };
