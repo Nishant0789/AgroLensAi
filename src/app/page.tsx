@@ -109,11 +109,13 @@ export default function HomePage() {
                   variants={featureVariants}
                 >
                   <CardSpotlight
-                    className="p-6 flex flex-col items-center text-center transition-all duration-300 h-full">
-                    <div className="p-4 bg-primary/10 rounded-full mb-4">
-                      <feature.icon className="w-8 h-8 text-primary" />
+                    className="p-6 flex flex-col items-start text-left transition-all duration-300 h-full">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="p-3 bg-primary/10 rounded-full">
+                        <feature.icon className="w-6 h-6 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-headline font-semibold">{feature.title}</h3>
                     </div>
-                    <h3 className="text-xl font-headline font-semibold mb-2">{feature.title}</h3>
                     <p className="text-muted-foreground">{feature.description}</p>
                   </CardSpotlight>
                 </motion.div>
