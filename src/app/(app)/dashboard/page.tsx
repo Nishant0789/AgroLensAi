@@ -2,10 +2,9 @@
 
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check, Leaf, Plus, Tractor, Calendar, Droplet, SunSnow, Bug, History, ChevronDown, CheckCircle, Siren } from 'lucide-react';
+import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check, Leaf, Plus, Tractor, Calendar, Droplet, SunSnow, Bug, History, CheckCircle, Siren, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocation } from '@/lib/location';
 import { useEffect, useState, useMemo } from 'react';
@@ -22,6 +21,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { generateTaskTimeline } from '@/ai/flows/task-generator';
 import { format, parseISO, isFuture } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { type AnalyzeCropOutput } from '@/ai/ai-crop-scanner';
 
 const weatherIconMap: { [key: string]: React.ElementType } = {
     sun: Sun,
@@ -392,7 +392,6 @@ function MyFieldsAndTasks() {
                                                         <p className="font-semibold text-muted-foreground">All caught up!</p>
                                                     )}
                                                 </div>
-                                                <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
                                             </div>
                                         </AccordionTrigger>
                                         <AccordionContent className="px-4 pb-4">
@@ -443,20 +442,22 @@ function MyFieldsAndTasks() {
     )
 }
 
-type Scan = {
+type Scan = AnalyzeCropOutput & {
     id: string;
     imageUrl: string;
-    disease: string;
     createdAt: { seconds: number };
 }
+
 
 function ScanHistoryCard() {
     const { user } = useAuth();
     const firestore = useFirestore();
     const scansQuery = user ? query(collection(firestore, `users/${user.uid}/scans`), orderBy('createdAt', 'desc'), limit(5)) : null;
     const { data: scans, loading } = useCollection<Scan>(scansQuery);
+    const [selectedScan, setSelectedScan] = useState<Scan | null>(null);
 
     return (
+        <>
         <CardSpotlight className="mt-6">
             <CardHeader>
                 <CardTitle>Recent Scans</CardTitle>
@@ -471,30 +472,95 @@ function ScanHistoryCard() {
                         <p>Use the Crop Scanner to start building your history.</p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         {scans?.map(scan => (
                             <motion.div
                                 key={scan.id}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className="flex items-center gap-4 p-2 rounded-md hover:bg-secondary/30 transition-colors"
+                                onClick={() => setSelectedScan(scan)}
+                                className="flex items-center gap-4 p-2 rounded-md hover:bg-secondary/30 transition-colors cursor-pointer"
                             >
                                 <Image src={scan.imageUrl} alt={scan.disease} width={48} height={48} className="rounded-md object-cover h-12 w-12" />
                                 <div className="flex-1">
                                     <p className="font-semibold">{scan.disease}</p>
                                     <p className="text-sm text-muted-foreground">{scan.createdAt ? format(new Date(scan.createdAt.seconds * 1000), 'MMM d, yyyy') : 'N/A'}</p>
                                 </div>
-                                {scan.disease.toLowerCase() === 'healthy' ? (
-                                    <CheckCircle className="h-6 w-6 text-green-500" />
-                                ) : (
-                                    <Siren className="h-6 w-6 text-destructive" />
-                                )}
+                                <div className='flex items-center gap-2'>
+                                    {scan.disease.toLowerCase() === 'healthy' ? (
+                                        <CheckCircle className="h-6 w-6 text-green-500" />
+                                    ) : (
+                                        <Siren className="h-6 w-6 text-destructive" />
+                                    )}
+                                    <Eye className="h-5 w-5 text-muted-foreground"/>
+                                </div>
                             </motion.div>
                         ))}
                     </div>
                 )}
             </CardContent>
         </CardSpotlight>
+
+        <Dialog open={!!selectedScan} onOpenChange={(isOpen) => !isOpen && setSelectedScan(null)}>
+            <DialogContent className="max-w-3xl">
+                {selectedScan && (
+                    <>
+                    <DialogHeader>
+                        <DialogTitle>Scan Result: {selectedScan.disease}</DialogTitle>
+                        <DialogDescription>
+                            Scanned on {format(new Date(selectedScan.createdAt.seconds * 1000), 'MMMM d, yyyy, p')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid md:grid-cols-2 gap-6 mt-4 max-h-[70vh] overflow-y-auto">
+                        <div className="relative aspect-video">
+                            <Image src={selectedScan.imageUrl} alt="Scanned crop" layout="fill" objectFit="contain" className="rounded-md" />
+                        </div>
+                        <div className="space-y-4">
+                            <Accordion type="single" collapsible className="w-full" defaultValue="description">
+                                <AccordionItem value="description">
+                                    <AccordionTrigger>Description</AccordionTrigger>
+                                    <AccordionContent>{selectedScan.description}</AccordionContent>
+                                </AccordionItem>
+                                {selectedScan.symptoms && selectedScan.symptoms.length > 0 && (
+                                     <AccordionItem value="symptoms">
+                                        <AccordionTrigger>Symptoms</AccordionTrigger>
+                                        <AccordionContent>
+                                            <ul className="list-disc pl-5 space-y-1">
+                                                {selectedScan.symptoms.map((s, i) => <li key={i}>{s}</li>)}
+                                            </ul>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                )}
+                                {selectedScan.organicSolution && (
+                                    <AccordionItem value="organic">
+                                        <AccordionTrigger>Organic Solution</AccordionTrigger>
+                                        <AccordionContent className="whitespace-pre-line">{selectedScan.organicSolution}</AccordionContent>
+                                    </AccordionItem>
+                                )}
+                                {selectedScan.chemicalSolution && (
+                                    <AccordionItem value="chemical">
+                                        <AccordionTrigger>Chemical Solution</AccordionTrigger>
+                                        <AccordionContent className="whitespace-pre-line">{selectedScan.chemicalSolution}</AccordionContent>
+                                    </AccordionItem>
+                                )}
+                                {selectedScan.prevention && selectedScan.prevention.length > 0 && (
+                                    <AccordionItem value="prevention">
+                                        <AccordionTrigger>Prevention</AccordionTrigger>
+                                        <AccordionContent>
+                                            <ul className="list-disc pl-5 space-y-1">
+                                                {selectedScan.prevention.map((p, i) => <li key={i}>{p}</li>)}
+                                            </ul>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                )}
+                            </Accordion>
+                        </div>
+                    </div>
+                    </>
+                )}
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }
 

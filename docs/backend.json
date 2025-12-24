@@ -143,7 +143,7 @@
     },
     "Scan": {
       "title": "Crop Scan",
-      "description": "Represents a single crop scan performed by a user.",
+      "description": "Represents a single crop scan performed by a user, including the full analysis.",
       "type": "object",
       "properties": {
         "userId": {
@@ -156,11 +156,33 @@
         },
         "disease": {
           "type": "string",
-          "description": "The diagnosed disease."
+          "description": "The diagnosed disease (e.g., 'Healthy', 'Rust')."
         },
-        "solution": {
+        "description": {
           "type": "string",
-          "description": "The suggested solution."
+          "description": "A general overview of the disease."
+        },
+        "symptoms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of key symptoms to look for."
+        },
+        "organicSolution": {
+          "type": "string",
+          "description": "Detailed step-by-step organic or natural solutions."
+        },
+        "chemicalSolution": {
+          "type": "string",
+          "description": "Detailed step-by-step chemical-based solutions."
+        },
+        "prevention": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of actionable steps to prevent this disease."
         },
         "createdAt": {
           "type": "string",
@@ -168,7 +190,7 @@
           "description": "The timestamp of when the scan was created."
         }
       },
-      "required": ["userId", "imageUrl", "disease", "solution", "createdAt"]
+      "required": ["userId", "imageUrl", "disease", "createdAt"]
     }
   },
   "auth": {

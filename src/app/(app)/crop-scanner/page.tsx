@@ -45,7 +45,7 @@ export default function CropScannerPage() {
   const [cooldown, setCooldown] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { user, loading: userLoading } = useAuth();
+  const { user } = useAuth();
   const firestore = useFirestore();
 
   useEffect(() => {
@@ -122,7 +122,11 @@ export default function CropScannerPage() {
         userId: user.uid,
         imageUrl: imagePreview,
         disease: analysisResult.disease,
-        solution: analysisResult.organicSolution,
+        description: analysisResult.description,
+        symptoms: analysisResult.symptoms,
+        organicSolution: analysisResult.organicSolution,
+        chemicalSolution: analysisResult.chemicalSolution,
+        prevention: analysisResult.prevention,
         createdAt: serverTimestamp(),
       }).catch(e => console.error("Failed to save scan history:", e));
       
