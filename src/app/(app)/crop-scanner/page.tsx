@@ -206,7 +206,7 @@ export default function CropScannerPage() {
   }
 
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
-  const isProcessing = status === 'analyzing' || status === 'translating';
+  const isProcessing = status === 'analyzing' || status === 'translating' || subStatus !== 'idle';
 
   return (
     <div className="container mx-auto max-w-4xl">
@@ -219,7 +219,7 @@ export default function CropScannerPage() {
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
-      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={isProcessing || subStatus !== 'idle'} />
+      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={isProcessing} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <CardSpotlight>
@@ -245,7 +245,7 @@ export default function CropScannerPage() {
 
             {imagePreview && status === 'idle' && (
               <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={handleScan} disabled={isProcessing || subStatus !== 'idle' || cooldown > 0} className="w-full">
+                 <Button onClick={handleScan} disabled={isProcessing || cooldown > 0} className="w-full">
                     {isProcessing ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
                      cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
@@ -254,7 +254,7 @@ export default function CropScannerPage() {
             
             {imagePreview && (status === 'success' || status === 'error') && (
                  <div className="flex flex-col w-full gap-2 mt-4">
-                    <Button onClick={reset} variant="outline" className="w-full" disabled={isProcessing || subStatus !== 'idle'}>
+                    <Button onClick={reset} variant="outline" className="w-full" disabled={isProcessing}>
                         <RefreshCw className="mr-2" /> Scan Another Crop
                     </Button>
                  </div>
@@ -276,7 +276,7 @@ export default function CropScannerPage() {
                         <p>Analysis results will appear here.</p>
                      </div>
                   )}
-                  {isProcessing && status !== 'success' && (
+                  {(status === 'analyzing' || status === 'translating') && (
                     <div className="text-center">
                       {status === 'analyzing' ? (
                          <>
@@ -297,7 +297,7 @@ export default function CropScannerPage() {
                         <AlertTriangle className="mx-auto h-12 w-12 mb-4" />
                         <h3 className="font-semibold mb-2">Analysis Failed</h3>
                         <p className="text-sm mb-4">{error}</p>
-                        <Button onClick={() => handleScan()} variant="secondary" disabled={cooldown > 0}>
+                        <Button onClick={handleScan} variant="secondary" disabled={cooldown > 0}>
                            {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2"/> Try Again</>}
                         </Button>
                     </div>
