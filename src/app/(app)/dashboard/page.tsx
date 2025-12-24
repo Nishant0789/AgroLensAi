@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check, Leaf, Plus, Tractor, Calendar, Droplet, SunSnow, Bug } from 'lucide-react';
+import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check, Leaf, Plus, Tractor, Calendar, Droplet, SunSnow, Bug, History, ChevronDown, CheckCircle, Siren } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocation } from '@/lib/location';
 import { useEffect, useState, useMemo } from 'react';
@@ -20,7 +20,8 @@ import { collection, query, orderBy, limit, addDoc, serverTimestamp, updateDoc, 
 import { CardSpotlight } from '@/components/ui/card-spotlight';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { generateTaskTimeline } from '@/ai/flows/task-generator';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isFuture } from 'date-fns';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const weatherIconMap: { [key: string]: React.ElementType } = {
     sun: Sun,
@@ -188,7 +189,7 @@ function WeatherCard() {
   );
 }
 
-// ====== New Components for Field & Task Management ======
+// ====== Field & Task Management ======
 
 type Field = {
     id: string;
@@ -197,9 +198,28 @@ type Field = {
     createdAt: { seconds: number };
 }
 
+type Task = {
+    id: string;
+    fieldId: string;
+    title: string;
+    description: string;
+    date: string;
+    category: "Watering" | "Fertilizing" | "Pest Control" | "Planting" | "Harvesting" | "Other";
+    completed: boolean;
+}
+
 type NewFieldInputs = {
     name: string;
     crop: string;
+};
+
+const categoryIcons = {
+    Watering: <Droplet className="text-blue-500" />,
+    Fertilizing: <Leaf className="text-green-500" />,
+    "Pest Control": <Bug className="text-red-500" />,
+    Planting: <Tractor className="text-yellow-500" />,
+    Harvesting: <Tractor className="text-purple-500" />,
+    Other: <SunSnow className="text-gray-500" />
 };
 
 function AddFieldModal() {
@@ -223,8 +243,8 @@ function AddFieldModal() {
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <Plus className="mr-2" /> Add New Field
+                <Button size="sm">
+                    <Plus className="mr-2" /> Add Field
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -258,79 +278,12 @@ function AddFieldModal() {
     )
 }
 
-function MyFields() {
-    const { user } = useAuth();
-    const firestore = useFirestore();
-    const fieldsQuery = user ? query(collection(firestore, `users/${user.uid}/fields`), orderBy('createdAt', 'desc')) : null;
-    const { data: fields, loading } = useCollection<Field>(fieldsQuery);
-
-    return (
-        <CardSpotlight className="mt-6">
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle>My Fields</CardTitle>
-                    <CardDescription>Manage your fields and the crops you're growing.</CardDescription>
-                </div>
-                <AddFieldModal />
-            </CardHeader>
-            <CardContent>
-                {loading && <div className="text-center p-8"><Loader2 className="mx-auto animate-spin" /></div>}
-                {!loading && (!fields || fields.length === 0) ? (
-                    <div className="text-center text-muted-foreground p-8">
-                        <Tractor className="mx-auto h-12 w-12 mb-4"/>
-                        <h3 className="font-semibold">No fields yet</h3>
-                        <p>Add your first field to start getting personalized advice.</p>
-                    </div>
-                ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Field Name</TableHead>
-                                <TableHead>Crop</TableHead>
-                                <TableHead>Added On</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {fields?.map(field => (
-                                <TableRow key={field.id}>
-                                    <TableCell className="font-medium">{field.name}</TableCell>
-                                    <TableCell><Badge variant="secondary">{field.crop}</Badge></TableCell>
-                                    <TableCell>{field.createdAt ? new Date(field.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                )}
-            </CardContent>
-        </CardSpotlight>
-    )
-}
-
-type Task = {
-    id: string;
-    fieldId: string;
-    title: string;
-    description: string;
-    date: string;
-    category: "Watering" | "Fertilizing" | "Pest Control" | "Planting" | "Harvesting" | "Other";
-    completed: boolean;
-}
-
-const categoryIcons = {
-    Watering: <Droplet className="text-blue-500" />,
-    Fertilizing: <Leaf className="text-green-500" />,
-    "Pest Control": <Bug className="text-red-500" />,
-    Planting: <Tractor className="text-yellow-500" />,
-    Harvesting: <Tractor className="text-purple-500" />,
-    Other: <SunSnow className="text-gray-500" />
-};
-
-function TaskTimeline() {
+function MyFieldsAndTasks() {
     const { user } = useAuth();
     const firestore = useFirestore();
     const { location } = useLocation();
 
-    const fieldsQuery = user ? query(collection(firestore, `users/${user.uid}/fields`)) : null;
+    const fieldsQuery = user ? query(collection(firestore, `users/${user.uid}/fields`), orderBy('createdAt', 'desc')) : null;
     const { data: fields, loading: fieldsLoading } = useCollection<Field>(fieldsQuery);
 
     const tasksQuery = user ? query(collection(firestore, `users/${user.uid}/tasks`), orderBy('date', 'asc')) : null;
@@ -338,10 +291,28 @@ function TaskTimeline() {
     
     const [isGenerating, setIsGenerating] = useState(false);
 
-    const generateTasksForField = async (field: Field) => {
-        if (!user || !location || isGenerating) return;
-        setIsGenerating(true);
+    // Group tasks by field ID for easy lookup
+    const tasksByField = useMemo(() => {
+        if (!tasks) return {};
+        return tasks.reduce((acc, task) => {
+            if (!acc[task.fieldId]) {
+                acc[task.fieldId] = [];
+            }
+            acc[task.fieldId].push(task);
+            return acc;
+        }, {} as Record<string, Task[]>);
+    }, [tasks]);
 
+    // Find the next upcoming action for a given field
+    const getNextAction = (fieldId: string) => {
+        const fieldTasks = tasksByField[fieldId] || [];
+        const upcomingTasks = fieldTasks.filter(task => !task.completed && isFuture(parseISO(task.date)));
+        return upcomingTasks.length > 0 ? upcomingTasks[0] : null;
+    }
+
+    const generateTasksForField = async (field: Field) => {
+        if (!user || !location) return;
+        setIsGenerating(true);
         try {
             const result = await generateTaskTimeline({
                 crop: field.crop,
@@ -351,20 +322,13 @@ function TaskTimeline() {
                     latitude: location.lat,
                     longitude: location.lon,
                 },
-                // For simplicity, we assume planting date is the date the field was added.
-                // A more robust solution would ask the user for this.
                 plantingDate: format(new Date(field.createdAt.seconds * 1000), 'yyyy-MM-dd')
             });
 
             const tasksCollection = collection(firestore, `users/${user.uid}/tasks`);
             for (const task of result.tasks) {
-                await addDoc(tasksCollection, {
-                    ...task,
-                    fieldId: field.id,
-                    completed: false,
-                });
+                await addDoc(tasksCollection, { ...task, fieldId: field.id, completed: false });
             }
-
         } catch (error) {
             console.error("Failed to generate tasks:", error);
         } finally {
@@ -372,97 +336,167 @@ function TaskTimeline() {
         }
     };
 
-    const handleGenerateAllTasks = () => {
-        fields?.forEach(field => generateTasksForField(field));
-    }
-    
     const handleToggleComplete = async (task: Task) => {
-      if (!user) return;
-      const taskDocRef = doc(firestore, `users/${user.uid}/tasks`, task.id);
-      await updateDoc(taskDocRef, { completed: !task.completed });
+        if (!user) return;
+        const taskDocRef = doc(firestore, `users/${user.uid}/tasks`, task.id);
+        await updateDoc(taskDocRef, { completed: !task.completed });
     };
-
-    const groupedTasks = useMemo(() => {
-        if (!tasks) return {};
-        return tasks.reduce((acc, task) => {
-            const date = format(parseISO(task.date), 'EEEE, MMMM d');
-            if (!acc[date]) {
-                acc[date] = [];
-            }
-            acc[date].push(task);
-            return acc;
-        }, {} as Record<string, Task[]>);
-    }, [tasks]);
-
-    const fieldMap = useMemo(() => {
-        if (!fields) return {};
-        return fields.reduce((acc, field) => {
-            acc[field.id] = field.name;
-            return acc;
-        }, {} as Record<string, string>);
-    }, [fields]);
-
+    
+    const isLoading = fieldsLoading || tasksLoading;
 
     return (
         <CardSpotlight className="mt-6">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle>Task Timeline</CardTitle>
-                    <CardDescription>Your AI-generated schedule for the upcoming week.</CardDescription>
+                    <CardTitle>My Fields & Tasks</CardTitle>
+                    <CardDescription>Manage your fields and view their AI-generated timelines.</CardDescription>
                 </div>
-                 <Button onClick={handleGenerateAllTasks} disabled={isGenerating || fieldsLoading || !fields?.length}>
-                    {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <Calendar className="mr-2" />}
-                    Generate Tasks
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={() => fields?.forEach(generateTasksForField)} disabled={isGenerating || fieldsLoading || !fields?.length} size="sm" variant="secondary">
+                        {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <Calendar className="mr-2" />}
+                        {isGenerating ? 'Generating...' : 'Refresh All Tasks'}
+                    </Button>
+                    <AddFieldModal />
+                </div>
             </CardHeader>
             <CardContent>
-                {(tasksLoading || fieldsLoading) && <div className="text-center p-8"><Loader2 className="mx-auto animate-spin" /></div>}
-                
-                {!tasksLoading && !tasks?.length && (
+                {isLoading && <div className="text-center p-8"><Loader2 className="mx-auto animate-spin" /></div>}
+                {!isLoading && (!fields || fields.length === 0) ? (
                     <div className="text-center text-muted-foreground p-8">
-                        <Calendar className="mx-auto h-12 w-12 mb-4"/>
-                        <h3 className="font-semibold">No tasks scheduled</h3>
-                        <p>Click "Generate Tasks" to create your personalized timeline.</p>
+                        <Tractor className="mx-auto h-12 w-12 mb-4"/>
+                        <h3 className="font-semibold">No fields yet</h3>
+                        <p>Add your first field to start getting personalized advice.</p>
                     </div>
+                ) : (
+                    <Accordion type="single" collapsible className="w-full space-y-2">
+                        {fields?.map(field => {
+                            const fieldTasks = tasksByField[field.id] || [];
+                            const nextAction = getNextAction(field.id);
+                            return (
+                                <AccordionItem value={field.id} key={field.id} className="border-none">
+                                    <CardSpotlight className="p-0">
+                                        <AccordionTrigger className="p-4 w-full cursor-pointer hover:no-underline [&[data-state=open]>svg]:text-primary">
+                                            <div className="flex items-center justify-between w-full">
+                                                <div className="flex items-center gap-4">
+                                                    <Tractor className="h-6 w-6 text-primary" />
+                                                    <div>
+                                                        <h3 className="font-semibold text-left">{field.name}</h3>
+                                                        <Badge variant="secondary">{field.crop}</Badge>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right hidden sm:block">
+                                                    <p className="text-xs text-muted-foreground">Next Action</p>
+                                                    {nextAction ? (
+                                                        <p className="font-semibold">{nextAction.title} by {format(parseISO(nextAction.date), 'MMM d')}</p>
+                                                    ) : (
+                                                        <p className="font-semibold text-muted-foreground">All caught up!</p>
+                                                    )}
+                                                </div>
+                                                <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="px-4 pb-4">
+                                            {fieldTasks.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {fieldTasks.map(task => (
+                                                        <motion.div 
+                                                            key={task.id}
+                                                            className={`flex items-start gap-3 p-3 rounded-md transition-all ${task.completed ? 'bg-secondary/50 text-muted-foreground opacity-70' : 'bg-secondary/20'}`}
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                        >
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => handleToggleComplete(task)}>
+                                                              <Check className={`transition-all ${task.completed ? 'opacity-100 text-green-500' : 'opacity-50'}`} />
+                                                            </Button>
+                                                            <div className="flex-1">
+                                                                <p className={`font-medium ${task.completed && 'line-through'}`}>{task.title}</p>
+                                                                <p className="text-sm text-muted-foreground">{task.description}</p>
+                                                            </div>
+                                                            <div className="flex flex-col items-end text-right">
+                                                                <Badge variant="outline" className="flex items-center gap-1.5 mb-1">
+                                                                    {categoryIcons[task.category as keyof typeof categoryIcons]}
+                                                                    {task.category}
+                                                                </Badge>
+                                                                <span className="text-xs text-muted-foreground">{format(parseISO(task.date), 'EEEE, MMM d')}</span>
+                                                            </div>
+                                                        </motion.div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center p-4 text-muted-foreground">
+                                                    <p className="mb-2">No tasks found for this field.</p>
+                                                    <Button onClick={() => generateTasksForField(field)} size="sm" disabled={isGenerating}>
+                                                        {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <Calendar className="mr-2" />}
+                                                        Generate Timeline
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </AccordionContent>
+                                    </CardSpotlight>
+                                </AccordionItem>
+                            )
+                        })}
+                    </Accordion>
                 )}
-                
-                <div className="space-y-6">
-                    {Object.entries(groupedTasks).map(([date, dateTasks]) => (
-                        <div key={date}>
-                            <h3 className="font-semibold mb-2 text-primary">{date}</h3>
-                            <div className="space-y-2">
-                                {dateTasks.map(task => (
-                                    <motion.div 
-                                        key={task.id}
-                                        className={`flex items-start gap-3 p-3 rounded-md transition-all ${task.completed ? 'bg-secondary/50 text-muted-foreground line-through' : 'bg-secondary/20'}`}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                    >
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleToggleComplete(task)}>
-                                          <Check className={`transition-all ${task.completed ? 'opacity-100' : 'opacity-0'}`} />
-                                        </Button>
-                                        <div className="flex-1">
-                                            <p className="font-medium">{task.title}</p>
-                                            <p className="text-sm text-muted-foreground">{task.description}</p>
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                            <Badge variant="outline" className="flex items-center gap-1.5">
-                                                {categoryIcons[task.category as keyof typeof categoryIcons]}
-                                                {task.category}
-                                            </Badge>
-                                            <span className="text-xs text-muted-foreground mt-1">{fieldMap[task.fieldId] || '...'}</span>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
             </CardContent>
         </CardSpotlight>
     )
 }
 
+type Scan = {
+    id: string;
+    imageUrl: string;
+    disease: string;
+    createdAt: { seconds: number };
+}
+
+function ScanHistoryCard() {
+    const { user } = useAuth();
+    const firestore = useFirestore();
+    const scansQuery = user ? query(collection(firestore, `users/${user.uid}/scans`), orderBy('createdAt', 'desc'), limit(5)) : null;
+    const { data: scans, loading } = useCollection<Scan>(scansQuery);
+
+    return (
+        <CardSpotlight className="mt-6">
+            <CardHeader>
+                <CardTitle>Recent Scans</CardTitle>
+                <CardDescription>A look at your recent crop health analyses.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {loading && <div className="text-center p-8"><Loader2 className="mx-auto animate-spin" /></div>}
+                {!loading && (!scans || scans.length === 0) ? (
+                    <div className="text-center text-muted-foreground p-8">
+                        <History className="mx-auto h-12 w-12 mb-4"/>
+                        <h3 className="font-semibold">No scan history</h3>
+                        <p>Use the Crop Scanner to start building your history.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {scans?.map(scan => (
+                            <motion.div
+                                key={scan.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="flex items-center gap-4 p-2 rounded-md hover:bg-secondary/30 transition-colors"
+                            >
+                                <Image src={scan.imageUrl} alt={scan.disease} width={48} height={48} className="rounded-md object-cover h-12 w-12" />
+                                <div className="flex-1">
+                                    <p className="font-semibold">{scan.disease}</p>
+                                    <p className="text-sm text-muted-foreground">{scan.createdAt ? format(new Date(scan.createdAt.seconds * 1000), 'MMM d, yyyy') : 'N/A'}</p>
+                                </div>
+                                {scan.disease.toLowerCase() === 'healthy' ? (
+                                    <CheckCircle className="h-6 w-6 text-green-500" />
+                                ) : (
+                                    <Siren className="h-6 w-6 text-destructive" />
+                                )}
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </CardSpotlight>
+    );
+}
 
 export default function DashboardPage() {
   const FADE_IN = {
@@ -487,16 +521,16 @@ export default function DashboardPage() {
         animate="visible"
         transition={{ duration: 0.5, delay: 0.3 }}
       >
-        <MyFields />
+        <MyFieldsAndTasks />
       </motion.div>
 
-      <motion.div
+       <motion.div
         variants={FADE_IN}
         initial="hidden"
         animate="visible"
         transition={{ duration: 0.5, delay: 0.4 }}
       >
-        <TaskTimeline />
+        <ScanHistoryCard />
       </motion.div>
     </div>
   );
