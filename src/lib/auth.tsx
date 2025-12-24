@@ -48,34 +48,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const userDocRef = doc(firestore, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
+        try {
+          const userDoc = await getDoc(userDocRef);
 
-        let userData = {};
-        if (!userDoc.exists()) {
-          const newUserPayload = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-            phoneNumber: firebaseUser.phoneNumber,
-            createdAt: serverTimestamp(),
-            currentCrop: 'Wheat' // Default crop
-          };
-          await setDoc(userDocRef, newUserPayload, { merge: true });
-          userData = newUserPayload;
-        } else {
-          userData = userDoc.data();
+          let fullUser: User;
+          if (!userDoc.exists()) {
+            const newUserPayload = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              phoneNumber: firebaseUser.phoneNumber,
+              createdAt: serverTimestamp(),
+              currentCrop: 'Wheat' // Default crop
+            };
+            await setDoc(userDocRef, newUserPayload, { merge: true });
+            fullUser = { ...newUserPayload, firestore };
+          } else {
+            fullUser = { 
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              phoneNumber: firebaseUser.phoneNumber,
+              ...userDoc.data(),
+              firestore 
+            };
+          }
+          
+          setUser(fullUser);
+
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setUser(null); // Or handle error appropriately
         }
-        
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-          phoneNumber: firebaseUser.phoneNumber,
-          firestore: firestore,
-          ...userData,
-        });
+
       } else {
         setUser(null);
       }
@@ -83,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [auth, firestore, router]);
+  }, [auth, firestore]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();

@@ -87,7 +87,6 @@ export default function CropScannerPage() {
   };
 
   const handleScan = async () => {
-    console.log("Logic Check:", { imagePreview: !!imagePreview, user: !!user, status, cooldown });
     if (!imagePreview || !user || status === 'analyzing' || status === 'translating' || cooldown > 0) return;
     
     setCooldown(10);
@@ -153,7 +152,7 @@ export default function CropScannerPage() {
         console.error("Error analyzing crop:", err);
         setError(err.message || "The AI assistant could not analyze the image. It might be busy. Please try again in a moment.");
         setStatus('error');
-        setCooldown(0); // Reset cooldown on error
+        setCooldown(0);
     }
   };
 
@@ -225,7 +224,6 @@ export default function CropScannerPage() {
               {imagePreview && status !== 'analyzing' && status !== 'translating' && (
                 <Button 
                   onClick={() => {
-                    console.log("Attempting scan...");
                     if (!user) {
                       toast({ title: "Auth Error", description: "Please log in first", variant: "destructive" });
                       return;
