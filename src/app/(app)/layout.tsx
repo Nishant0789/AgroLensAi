@@ -81,6 +81,7 @@ export default function AppLayout({
                                     <TooltipTrigger asChild>
                                     <Link
                                         href={item.href}
+                                        prefetch={true}
                                         className={`relative flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-primary/20 ${pathname.startsWith(item.href) ? 'bg-primary/20 text-primary' : 'text-muted-foreground'} ${isCollapsed ? 'justify-center' : ''}`}
                                     >
                                         <item.icon className="h-5 w-5" />
