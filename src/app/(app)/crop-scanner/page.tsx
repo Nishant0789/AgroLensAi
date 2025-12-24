@@ -77,7 +77,7 @@ export default function CropScannerPage() {
   };
 
   const handleScan = async () => {
-    if (!imagePreview || !user || cooldown > 0 || status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert') return;
+    if (!imagePreview || !user || cooldown > 0) return;
     setStatus('analyzing');
     setSubStatus('idle');
     setError(null);
@@ -208,7 +208,6 @@ export default function CropScannerPage() {
   }
 
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
-  const isProcessing = status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert';
 
   return (
     <div className="container mx-auto max-w-4xl">
@@ -221,7 +220,7 @@ export default function CropScannerPage() {
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
-      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={isProcessing} />
+      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={status === 'analyzing' || status === 'translating'} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <CardSpotlight>
@@ -247,13 +246,13 @@ export default function CropScannerPage() {
 
             {imagePreview && (
               <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={handleScan} disabled={isProcessing || !user || cooldown > 0} className="w-full">
+                 <Button onClick={handleScan} disabled={status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert' || !user || cooldown > 0} className="w-full">
                     {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
                      status === 'translating' ? <><Loader className="animate-spin mr-2"/>Translating...</> :
                      subStatus === 'sendingAlert' ? <><Share2 className="animate-pulse mr-2"/>Sending Alert...</> :
                      cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
-                <Button onClick={reset} variant="outline" className="w-full" disabled={isProcessing}>
+                <Button onClick={reset} variant="outline" className="w-full" disabled={status === 'analyzing' || status === 'translating'}>
                     <Upload className="mr-2" /> Upload New Image
                 </Button>
               </div>
@@ -385,4 +384,5 @@ export default function CropScannerPage() {
   );
 }
 
+    
     
