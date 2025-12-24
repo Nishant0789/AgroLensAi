@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -48,6 +47,7 @@ export default function CropScannerPage() {
   const { user } = useAuth();
   const firestore = useFirestore();
   const [cooldown, setCooldown] = useState(0);
+  const [language, setLanguage] = useState('English');
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
