@@ -21,7 +21,6 @@ import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 type ScanResult = AnalyzeCropOutput;
 type Status = 'idle' | 'analyzing' | 'translating' | 'success' | 'error';
-type SubStatus = 'idle' | 'alerting';
 
 const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: string; onLanguageChange: (lang: string) => void; disabled: boolean }) => (
     <div className="flex items-center justify-center gap-2 mb-4">
@@ -38,7 +37,6 @@ const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: 
 export default function CropScannerPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [subStatus, setSubStatus] = useState<SubStatus>('idle');
   const [result, setResult] = useState<ScanResult | null>(null);
   const [originalResult, setOriginalResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +67,6 @@ export default function CropScannerPage() {
         setResult(null);
         setOriginalResult(null);
         setError(null);
-        setSubStatus('idle');
       };
       reader.readAsDataURL(file);
     }
@@ -119,7 +116,6 @@ export default function CropScannerPage() {
       }
       
       if (analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
-        setSubStatus('alerting');
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
@@ -141,8 +137,6 @@ export default function CropScannerPage() {
                 description: `Could not notify nearby farmers.`,
                 variant: 'destructive'
                })
-            } finally {
-                setSubStatus('idle');
             }
           },
           (error) => {
@@ -152,7 +146,6 @@ export default function CropScannerPage() {
                 description: "Could not get your location to send an alert.",
                 variant: 'destructive'
             });
-            setSubStatus('idle');
           }
         );
       }
@@ -196,14 +189,13 @@ export default function CropScannerPage() {
       setResult(null);
       setOriginalResult(null);
       setError(null);
-      setSubStatus('idle');
       if (fileInputRef.current) {
           fileInputRef.current.value = '';
       }
   }
 
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
-  const isProcessing = status === 'analyzing' || status === 'translating' || subStatus === 'alerting';
+  const isProcessing = status === 'analyzing' || status === 'translating';
 
   return (
     <div className="container mx-auto max-w-4xl">
@@ -243,9 +235,7 @@ export default function CropScannerPage() {
             {imagePreview && !result && status !== 'analyzing' && status !== 'translating' && (
               <div className="flex flex-col w-full gap-2 mt-4">
                  <Button onClick={handleScan} disabled={isProcessing || cooldown > 0} className="w-full">
-                    {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
-                     status === 'translating' ? <><Loader className="animate-spin mr-2"/>Translating...</> :
-                     subStatus === 'alerting' ? <><Loader className="animate-spin mr-2"/>Notifying Community...</> :
+                    {isProcessing ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
                      cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
                 <Button onClick={reset} variant="outline" className="w-full" disabled={isProcessing}>
@@ -315,12 +305,6 @@ export default function CropScannerPage() {
                            {isHealthy ? 'Diagnosis: Healthy' : `Diagnosis: ${result.disease}`}
                          </h3>
                          <p className="text-sm text-muted-foreground mt-1">{result.description}</p>
-                         {subStatus === 'alerting' && (
-                             <div className="flex items-center gap-2 text-sm text-blue-500 mt-2">
-                                 <Share2 className="w-4 h-4 animate-pulse"/>
-                                 <span>Notifying nearby farmers...</span>
-                             </div>
-                         )}
                       </motion.div>
                       
                       <Accordion type="single" collapsible className="w-full" defaultValue={isHealthy ? '' : 'symptoms'}>
@@ -389,3 +373,4 @@ export default function CropScannerPage() {
     </div>
   );
 }
+    
