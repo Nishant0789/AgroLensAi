@@ -482,7 +482,7 @@ function MyFieldsAndTasks() {
 type Scan = AnalyzeCropOutput & {
     id: string;
     imageUrl: string;
-    createdAt: { seconds: number };
+    createdAt: { seconds: number, nanoseconds: number };
 }
 
 
@@ -545,7 +545,7 @@ function ScanHistoryCard() {
                     <DialogHeader>
                         <DialogTitle>Scan Result: {selectedScan.disease}</DialogTitle>
                         <DialogDescription>
-                            Scanned on {format(new Date(selectedScan.createdAt.seconds * 1000), 'MMMM d, yyyy, p')}
+                            Scanned on {selectedScan.createdAt ? format(new Date(selectedScan.createdAt.seconds * 1000), 'MMMM d, yyyy, p') : 'N/A'}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid md:grid-cols-2 gap-6 mt-4 max-h-[70vh] overflow-y-auto">
