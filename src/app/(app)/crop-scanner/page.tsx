@@ -87,6 +87,7 @@ export default function CropScannerPage() {
 
   const handleScan = async () => {
     if (!imagePreview || !user) return;
+    if (status === 'analyzing' || status === 'translating' || cooldown > 0) return;
     
     setStatus('analyzing');
     setError(null);
@@ -366,4 +367,3 @@ export default function CropScannerPage() {
     </div>
   );
 }
-    
