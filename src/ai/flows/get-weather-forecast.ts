@@ -18,7 +18,7 @@ const GetWeatherForecastInputSchema = z.object({
 });
 export type GetWeatherForecastInput = z.infer<typeof GetWeatherForecastInputSchema>;
 
-const WeatherDataPointSchema = z.object({
+export const WeatherDataPointSchema = z.object({
     day: z.string().describe("The day of the week (e.g., 'Today', 'Tue')."),
     temp: z.number().describe("The temperature in Celsius."),
     icon: z.string().describe("An icon name representing the weather (e.g., 'Sunny', 'Partly-Cloudy', 'Rain')."),
