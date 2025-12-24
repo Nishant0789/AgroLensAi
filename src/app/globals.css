@@ -9,7 +9,7 @@ body {
   :root {
     --background: 60 56% 91%; /* #F5F5DC - Soft earth tone */
     --foreground: 220 15% 25%;
-    --card: 60 30% 96% / 0.05;
+    --card: 220 15% 25% / 0.05;
     --card-foreground: 220 15% 25%;
     --popover: 60 30% 96%;
     --popover-foreground: 220 15% 25%;
@@ -44,7 +44,7 @@ body {
   .dark {
     --background: 0 0% 0%; /* Black */
     --foreground: 120 100% 90%; /* Light Green */
-    --card: 120 100% 50% / 0.05; /* Faint Green Tint */
+    --card: 240 4% 16% / 0.1; /* Faint Grey Tint */
     --card-foreground: 120 100% 90%;
     --popover: 0 0% 5%;
     --popover-foreground: 120 100% 90%;
