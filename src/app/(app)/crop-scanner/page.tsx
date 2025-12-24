@@ -44,7 +44,7 @@ export default function CropScannerPage() {
   const [cooldown, setCooldown] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: userLoading } = useAuth();
   const firestore = useFirestore();
 
   useEffect(() => {
@@ -186,6 +186,14 @@ export default function CropScannerPage() {
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
   const isProcessing = status === 'analyzing' || status === 'translating';
 
+  if (userLoading || !user) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader className="w-16 h-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto max-w-4xl">
       <motion.div
@@ -232,6 +240,7 @@ export default function CropScannerPage() {
                     }
                     handleScan();
                   }} 
+                  disabled={cooldown > 0}
                   className="w-full relative z-50 bg-primary hover:opacity-90"
                 >
                   {cooldown > 0 ? `Wait ${cooldown}s...` : 'Scan Crop'}
@@ -366,5 +375,3 @@ export default function CropScannerPage() {
     </div>
   );
 }
-
-    
