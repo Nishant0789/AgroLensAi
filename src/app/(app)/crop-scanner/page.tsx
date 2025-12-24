@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Lottie from 'lottie-react';
-import { Camera, Upload, CheckCircle, AlertTriangle, Lightbulb, Loader, RefreshCw, Leaf, Siren, Sprout, TestTube2, Languages, Share2 } from 'lucide-react';
+import { Camera, Upload, CheckCircle, AlertTriangle, Loader, RefreshCw, Leaf, Siren, Sprout, TestTube2, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import analyzingAnimation from '../../../../public/lottie/analyzing.json';
 import { alertNearbyDiseases } from '@/ai/flows/geo-location-alerts';
-import { analyzeCrop, AnalyzeCropOutput } from '@/ai/ai-crop-scanner';
+import { analyzeCrop, type AnalyzeCropOutput } from '@/ai/ai-crop-scanner';
 import { useAuth, useFirestore } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,7 +21,6 @@ import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 type ScanResult = AnalyzeCropOutput;
 type Status = 'idle' | 'analyzing' | 'translating' | 'success' | 'error';
-type SubStatus = 'idle' | 'alerting';
 
 const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: string; onLanguageChange: (lang: string) => void; disabled: boolean }) => (
     <div className="flex items-center justify-center gap-2 mb-4">
@@ -38,17 +37,19 @@ const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: 
 export default function CropScannerPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [subStatus, setSubStatus] = useState<SubStatus>('idle');
+  const [isAlerting, setIsAlerting] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [originalResult, setOriginalResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState('English');
+  const [cooldown, setCooldown] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const firestore = useFirestore();
-  const [cooldown, setCooldown] = useState(0);
-  const [language, setLanguage] = useState('English');
 
+  // Cooldown timer effect
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (cooldown > 0) {
@@ -59,19 +60,26 @@ export default function CropScannerPage() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
+  const resetState = useCallback(() => {
+    setImagePreview(null);
+    setStatus('idle');
+    setIsAlerting(false);
+    setResult(null);
+    setOriginalResult(null);
+    setError(null);
+    setCooldown(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, []);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      resetState(); // Reset everything first
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
-        // This is a full reset for a new image
-        setStatus('idle');
-        setSubStatus('idle');
-        setResult(null);
-        setOriginalResult(null);
-        setError(null);
-        setCooldown(0);
       };
       reader.readAsDataURL(file);
     }
@@ -89,18 +97,18 @@ export default function CropScannerPage() {
     try {
       const analysisResult = await analyzeCrop({
         photoDataUri: imagePreview,
-        language: 'English',
+        language: 'English', // Always fetch in the base language first
       });
-      
-      if (!analysisResult) {
-        throw new Error("The AI model did not return a valid analysis. This may be due to an issue with the image or the AI service. Please try a different image.");
+
+      if (!analysisResult || !analysisResult.disease) {
+        throw new Error("The AI model did not return a valid analysis. Please try a different image.");
       }
 
       setOriginalResult(analysisResult); 
+      setResult(analysisResult); // Show English result immediately
 
-      if (language === 'English') {
-        setResult(analysisResult);
-      } else {
+      // Translate if the current language is not English
+      if (language !== 'English') {
         setStatus('translating');
         const translatedResult = await translateContent({
             content: analysisResult,
@@ -111,58 +119,43 @@ export default function CropScannerPage() {
       
       setStatus('success');
 
-      try {
-        const scansCollection = collection(firestore, `users/${user.uid}/scans`);
-        await addDoc(scansCollection, {
-          userId: user.uid,
-          imageUrl: imagePreview,
-          disease: analysisResult.disease,
-          solution: analysisResult.organicSolution,
-          createdAt: serverTimestamp(),
-        });
-      } catch (e) {
-          console.error("Failed to save scan history:", e);
-      }
+      // --- Post-analysis async tasks ---
+
+      // 1. Save to Firestore (don't wait for it)
+      addDoc(collection(firestore, `users/${user.uid}/scans`), {
+        userId: user.uid,
+        imageUrl: imagePreview, // This can be a large string, consider storage implications
+        disease: analysisResult.disease,
+        solution: analysisResult.organicSolution,
+        createdAt: serverTimestamp(),
+      }).catch(e => console.error("Failed to save scan history:", e));
       
+      // 2. Send community alert if needed (don't wait for it)
       if (analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
-        setSubStatus('alerting');
+        setIsAlerting(true);
         navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            try {
-              await alertNearbyDiseases({
-                latitude,
-                longitude,
-                disease: analysisResult.disease,
-                sourceUserId: user.uid,
-              });
-              toast({
-                title: "Community Alert Sent",
-                description: `Notified nearby farmers of ${analysisResult.disease}.`,
-              });
-            } catch (error) {
-               console.error("Failed to send location alert:", error);
-               toast({
-                title: "Alert Failed",
-                description: `Could not notify nearby farmers.`,
-                variant: 'destructive'
-               })
-            } finally {
-                setSubStatus('idle');
-            }
-          },
-          (error) => {
-            console.error("Geolocation error for alerts:", error);
-            toast({
-                title: "Location Error",
-                description: "Could not get your location to send an alert.",
-                variant: 'destructive'
+          (position) => {
+            alertNearbyDiseases({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              disease: analysisResult.disease,
+              sourceUserId: user.uid,
+            }).then(() => {
+              toast({ title: "Community Alert Sent", description: `Notified nearby farmers of ${analysisResult.disease}.` });
+            }).catch(error => {
+              console.error("Failed to send location alert:", error);
+              toast({ title: "Alert Failed", description: `Could not notify nearby farmers.`, variant: 'destructive' });
+            }).finally(() => {
+              setIsAlerting(false);
             });
-            setSubStatus('idle');
+          },
+          (geoError) => {
+            console.error("Geolocation error for alerts:", geoError);
+            toast({ title: "Location Error", description: "Could not get your location to send an alert.", variant: 'destructive' });
+            setIsAlerting(false);
           }
         );
       }
-
     } catch (err: any) {
         console.error("Error analyzing crop:", err);
         setError(err.message || "The AI assistant could not analyze the image. It might be busy. Please try again in a moment.");
@@ -177,8 +170,8 @@ export default function CropScannerPage() {
     }
     
     if (lang === 'English') {
-        setResult(originalResult);
-        return;
+      setResult(originalResult);
+      return;
     }
 
     setStatus('translating');
@@ -192,24 +185,13 @@ export default function CropScannerPage() {
         console.error("Error translating content:", err);
         setError("Failed to translate the result. Please try again.");
     } finally {
-        setStatus('success');
+        setStatus('success'); // Return to success state even if translation fails
     }
   };
 
-  const reset = () => {
-      setImagePreview(null);
-      setStatus('idle');
-      setSubStatus('idle');
-      setResult(null);
-      setOriginalResult(null);
-      setError(null);
-      if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-      }
-  }
-
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
-  const isLanguageSwitcherDisabled = status === 'analyzing' || status === 'translating';
+  const isProcessing = status === 'analyzing' || status === 'translating';
+  const canScan = !isProcessing && cooldown === 0;
 
   return (
     <div className="container mx-auto max-w-4xl">
@@ -222,7 +204,7 @@ export default function CropScannerPage() {
         <h1 className="text-3xl font-bold font-headline">AI Crop Scanner</h1>
         <p className="text-muted-foreground mt-2">Upload an image of your crop to diagnose diseases and get solutions.</p>
       </motion.div>
-      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={isLanguageSwitcherDisabled} />
+      <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={isProcessing} />
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <CardSpotlight>
@@ -240,27 +222,25 @@ export default function CropScannerPage() {
             )}
             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
             
-            {!imagePreview && (
-                <Button onClick={() => fileInputRef.current?.click()} className="mt-4 w-full">
-                <Upload className="mr-2" /> Upload Image
-                </Button>
-            )}
+            <div className='flex flex-col w-full gap-2 mt-4'>
+              {!imagePreview && (
+                  <Button onClick={() => fileInputRef.current?.click()} className="w-full">
+                  <Upload className="mr-2" /> Upload Image
+                  </Button>
+              )}
 
-            {imagePreview && status === 'idle' && (
-              <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={handleScan} disabled={status !== 'idle' || cooldown > 0} className="w-full">
+              {imagePreview && (status === 'idle' || status === 'error') && (
+                <Button onClick={handleScan} disabled={!canScan} className="w-full">
                     {cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
-              </div>
-            )}
-            
-            {imagePreview && (status !== 'idle' && status !== 'analyzing' && status !== 'translating') && (
-                 <div className="flex flex-col w-full gap-2 mt-4">
-                    <Button onClick={reset} variant="outline" className="w-full">
-                        <RefreshCw className="mr-2" /> Scan Another Crop
-                    </Button>
-                 </div>
-             )}
+              )}
+              
+              {status !== 'idle' && status !== 'analyzing' && status !== 'translating' && (
+                  <Button onClick={resetState} variant="outline" className="w-full">
+                      <RefreshCw className="mr-2" /> Scan Another Crop
+                  </Button>
+              )}
+            </div>
           </CardContent>
         </CardSpotlight>
 
@@ -273,12 +253,12 @@ export default function CropScannerPage() {
             >
               <CardSpotlight className="min-h-[300px]">
                 <CardContent className="p-6 flex flex-col items-center justify-center h-full min-h-[300px]">
-                  {status === 'idle' && !result && (
+                  {status === 'idle' && (
                      <div className="text-center text-muted-foreground">
                         <p>Analysis results will appear here.</p>
                      </div>
                   )}
-                  {(status === 'analyzing' || status === 'translating') && (
+                  {isProcessing && (
                     <div className="text-center">
                       {status === 'analyzing' ? (
                          <>
@@ -299,7 +279,7 @@ export default function CropScannerPage() {
                         <AlertTriangle className="mx-auto h-12 w-12 mb-4" />
                         <h3 className="font-semibold mb-2">Analysis Failed</h3>
                         <p className="text-sm mb-4">{error}</p>
-                        <Button onClick={handleScan} variant="secondary" disabled={cooldown > 0}>
+                        <Button onClick={handleScan} variant="secondary" disabled={!canScan}>
                            {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2"/> Try Again</>}
                         </Button>
                     </div>
@@ -316,13 +296,13 @@ export default function CropScannerPage() {
                            {isHealthy ? 'Diagnosis: Healthy' : `Diagnosis: ${result.disease}`}
                          </h3>
                          <p className="text-sm text-muted-foreground mt-1">{result.description}</p>
-                         {subStatus === 'alerting' && (
+                         {isAlerting && (
                              <p className="text-sm text-amber-500 flex items-center gap-2 mt-2"><Loader className="animate-spin w-4 h-4"/>Sending community alert...</p>
                          )}
                       </motion.div>
                       
                       <Accordion type="single" collapsible className="w-full" defaultValue={isHealthy ? '' : 'symptoms'}>
-                        {!isHealthy && (
+                        {!isHealthy ? (
                           <>
                             <AccordionItem value="symptoms">
                               <AccordionTrigger>Symptoms</AccordionTrigger>
@@ -368,8 +348,7 @@ export default function CropScannerPage() {
                                 </AccordionContent>
                             </AccordionItem>
                           </>
-                        )}
-                         {isHealthy && (
+                        ) : (
                             <div className="text-center text-muted-foreground pt-4">
                                 <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-2"/>
                                 <p className="font-semibold">Your crop looks great!</p>
