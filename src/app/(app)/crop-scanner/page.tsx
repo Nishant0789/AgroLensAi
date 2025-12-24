@@ -22,6 +22,7 @@ import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 type ScanResult = AnalyzeCropOutput;
 type Status = 'idle' | 'analyzing' | 'translating' | 'success' | 'error';
+type SubStatus = 'idle' | 'alerting';
 
 const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: string; onLanguageChange: (lang: string) => void; disabled: boolean }) => (
     <div className="flex items-center justify-center gap-2 mb-4">
@@ -38,6 +39,7 @@ const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: 
 export default function CropScannerPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('idle');
+  const [subStatus, setSubStatus] = useState<SubStatus>('idle');
   const [result, setResult] = useState<ScanResult | null>(null);
   const [originalResult, setOriginalResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,8 +48,6 @@ export default function CropScannerPage() {
   const { user } = useAuth();
   const firestore = useFirestore();
   const [cooldown, setCooldown] = useState(0);
-  const [isAlerting, setIsAlerting] = useState(false);
-  const [language, setLanguage] = useState('English');
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -69,6 +69,7 @@ export default function CropScannerPage() {
         setResult(null);
         setOriginalResult(null);
         setError(null);
+        setSubStatus('idle');
       };
       reader.readAsDataURL(file);
     }
@@ -76,12 +77,12 @@ export default function CropScannerPage() {
 
   const handleScan = async () => {
     if (!imagePreview || !user) return;
-
+    
     setStatus('analyzing');
     setError(null);
     setResult(null);
     setOriginalResult(null);
-    setCooldown(10); // Start 10-second cooldown
+    setCooldown(10);
     
     try {
       const analysisResult = await analyzeCrop({
@@ -118,7 +119,7 @@ export default function CropScannerPage() {
       }
       
       if (analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
-        setIsAlerting(true);
+        setSubStatus('alerting');
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
@@ -141,7 +142,7 @@ export default function CropScannerPage() {
                 variant: 'destructive'
                })
             } finally {
-                setIsAlerting(false);
+                setSubStatus('idle');
             }
           },
           (error) => {
@@ -151,7 +152,7 @@ export default function CropScannerPage() {
                 description: "Could not get your location to send an alert.",
                 variant: 'destructive'
             });
-            setIsAlerting(false);
+            setSubStatus('idle');
           }
         );
       }
@@ -195,13 +196,14 @@ export default function CropScannerPage() {
       setResult(null);
       setOriginalResult(null);
       setError(null);
+      setSubStatus('idle');
       if (fileInputRef.current) {
           fileInputRef.current.value = '';
       }
   }
 
   const isHealthy = result?.disease.toLowerCase() === 'healthy';
-  const isProcessing = status === 'analyzing' || status === 'translating';
+  const isProcessing = status === 'analyzing' || status === 'translating' || subStatus === 'alerting';
 
   return (
     <div className="container mx-auto max-w-4xl">
@@ -238,11 +240,12 @@ export default function CropScannerPage() {
                 </Button>
             )}
 
-            {imagePreview && (
+            {imagePreview && !result && status !== 'analyzing' && status !== 'translating' && (
               <div className="flex flex-col w-full gap-2 mt-4">
                  <Button onClick={handleScan} disabled={isProcessing || cooldown > 0} className="w-full">
                     {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
                      status === 'translating' ? <><Loader className="animate-spin mr-2"/>Translating...</> :
+                     subStatus === 'alerting' ? <><Loader className="animate-spin mr-2"/>Notifying Community...</> :
                      cooldown > 0 ? `Please wait... (${cooldown}s)` : 'Scan Crop'}
                 </Button>
                 <Button onClick={reset} variant="outline" className="w-full" disabled={isProcessing}>
@@ -250,6 +253,13 @@ export default function CropScannerPage() {
                 </Button>
               </div>
             )}
+             {imagePreview && (result || status === 'analyzing' || status === 'translating') && (
+                 <div className="flex flex-col w-full gap-2 mt-4">
+                    <Button onClick={reset} variant="outline" className="w-full" disabled={isProcessing}>
+                        <RefreshCw className="mr-2" /> Scan Another Crop
+                    </Button>
+                 </div>
+             )}
           </CardContent>
         </CardSpotlight>
 
@@ -262,12 +272,12 @@ export default function CropScannerPage() {
             >
               <CardSpotlight className="min-h-[300px]">
                 <CardContent className="p-6 flex flex-col items-center justify-center h-full min-h-[300px]">
-                  {status === 'idle' && (
+                  {status === 'idle' && !result && (
                      <div className="text-center text-muted-foreground">
                         <p>Analysis results will appear here.</p>
                      </div>
                   )}
-                  {isProcessing && (
+                  {isProcessing && status !== 'success' && (
                     <div className="text-center">
                       {status === 'analyzing' ? (
                          <>
@@ -305,7 +315,7 @@ export default function CropScannerPage() {
                            {isHealthy ? 'Diagnosis: Healthy' : `Diagnosis: ${result.disease}`}
                          </h3>
                          <p className="text-sm text-muted-foreground mt-1">{result.description}</p>
-                         {isAlerting && (
+                         {subStatus === 'alerting' && (
                              <div className="flex items-center gap-2 text-sm text-blue-500 mt-2">
                                  <Share2 className="w-4 h-4 animate-pulse"/>
                                  <span>Notifying nearby farmers...</span>
