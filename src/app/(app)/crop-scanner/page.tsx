@@ -21,7 +21,6 @@ import { CardSpotlight } from '@/components/ui/card-spotlight';
 
 type ScanResult = AnalyzeCropOutput;
 type Status = 'idle' | 'analyzing' | 'translating' | 'success' | 'error';
-type SubStatus = 'idle' | 'alerting';
 
 const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: string; onLanguageChange: (lang: string) => void; disabled: boolean }) => (
     <div className="flex items-center justify-center gap-2 mb-4">
@@ -38,7 +37,6 @@ const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: 
 export default function CropScannerPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [subStatus, setSubStatus] = useState<SubStatus>('idle');
   const [result, setResult] = useState<ScanResult | null>(null);
   const [originalResult, setOriginalResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +60,6 @@ export default function CropScannerPage() {
   const resetState = () => {
     setImagePreview(null);
     setStatus('idle');
-    setSubStatus('idle');
     setResult(null);
     setOriginalResult(null);
     setError(null);
@@ -80,7 +77,6 @@ export default function CropScannerPage() {
         // Full reset when a new file is selected
         setImagePreview(reader.result as string);
         setStatus('idle');
-        setSubStatus('idle');
         setResult(null);
         setOriginalResult(null);
         setError(null);
@@ -91,6 +87,7 @@ export default function CropScannerPage() {
   };
 
   const handleScan = async () => {
+    console.log("Logic Check:", { imagePreview: !!imagePreview, user: !!user, status, cooldown });
     if (!imagePreview || !user || status === 'analyzing' || status === 'translating' || cooldown > 0) return;
     
     setCooldown(10);
@@ -132,7 +129,6 @@ export default function CropScannerPage() {
       }).catch(e => console.error("Failed to save scan history:", e));
       
       if (analysisResult.disease && analysisResult.disease.toLowerCase() !== 'healthy') {
-        setSubStatus('alerting');
         navigator.geolocation.getCurrentPosition(
           (position) => {
             alertNearbyDiseases({
@@ -145,14 +141,11 @@ export default function CropScannerPage() {
             }).catch(error => {
               console.error("Failed to send location alert:", error);
               toast({ title: "Alert Failed", description: `Could not notify nearby farmers.`, variant: 'destructive' });
-            }).finally(() => {
-              setSubStatus('idle');
             });
           },
           (geoError) => {
             console.error("Geolocation error for alerts:", geoError);
             toast({ title: "Location Error", description: "Could not get your location to send an alert.", variant: 'destructive' });
-            setSubStatus('idle');
           }
         );
       }
@@ -222,7 +215,7 @@ export default function CropScannerPage() {
             )}
             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
             
-            <div className='flex flex-col w-full gap-2 mt-4 relative z-20'>
+            <div className="relative z-[9999] pointer-events-auto flex flex-col w-full gap-2 mt-4">
               {!imagePreview && (
                   <Button onClick={() => fileInputRef.current?.click()} className="w-full">
                   <Upload className="mr-2" /> Upload Image
@@ -230,9 +223,19 @@ export default function CropScannerPage() {
               )}
 
               {imagePreview && status !== 'analyzing' && status !== 'translating' && (
-                  <Button onClick={handleScan} disabled={cooldown > 0} className="w-full">
-                      {cooldown > 0 ? `Cooldown: ${cooldown}s` : 'Scan Crop'}
-                  </Button>
+                <Button 
+                  onClick={() => {
+                    console.log("Attempting scan...");
+                    if (!user) {
+                      toast({ title: "Auth Error", description: "Please log in first", variant: "destructive" });
+                      return;
+                    }
+                    handleScan();
+                  }} 
+                  className="w-full relative z-50 bg-primary hover:opacity-90"
+                >
+                  {cooldown > 0 ? `Wait ${cooldown}s...` : 'Scan Crop'}
+                </Button>
               )}
               
               {status !== 'idle' && !isProcessing && (
@@ -296,9 +299,6 @@ export default function CropScannerPage() {
                            {isHealthy ? 'Diagnosis: Healthy' : `Diagnosis: ${result.disease}`}
                          </h3>
                          <p className="text-sm text-muted-foreground mt-1">{result.description}</p>
-                         {subStatus === 'alerting' && (
-                             <p className="text-sm text-amber-500 flex items-center gap-2 mt-2"><Loader className="animate-spin w-4 h-4"/>Sending community alert...</p>
-                         )}
                       </motion.div>
                       
                       <Accordion type="single" collapsible className="w-full" defaultValue={isHealthy ? '' : 'symptoms'}>
@@ -366,3 +366,5 @@ export default function CropScannerPage() {
     </div>
   );
 }
+
+    
