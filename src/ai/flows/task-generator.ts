@@ -10,8 +10,9 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { getWeatherForecast, WeatherDataPoint, WeatherDataPointSchema } from './get-weather-forecast';
-import { format, addDays } from 'date-fns';
+import { getWeatherForecast } from './get-weather-forecast';
+import { format } from 'date-fns';
+import { WeatherDataPointSchema } from './weather-types';
 
 const TaskSchema = z.object({
   title: z.string().describe("A short, clear title for the task (e.g., 'Water the cornfield')."),

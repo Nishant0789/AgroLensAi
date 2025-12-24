@@ -11,20 +11,13 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { format, addDays } from 'date-fns';
+import { WeatherDataPointSchema, type WeatherDataPoint } from './weather-types';
 
 const GetWeatherForecastInputSchema = z.object({
   latitude: z.number().describe('The latitude of the location.'),
   longitude: z.number().describe('The longitude of the location.'),
 });
 export type GetWeatherForecastInput = z.infer<typeof GetWeatherForecastInputSchema>;
-
-export const WeatherDataPointSchema = z.object({
-    day: z.string().describe("The day of the week (e.g., 'Today', 'Tue')."),
-    temp: z.number().describe("The temperature in Celsius."),
-    icon: z.string().describe("An icon name representing the weather (e.g., 'Sunny', 'Partly-Cloudy', 'Rain')."),
-    description: z.string().describe("A brief description of the weather (e.g., 'Sunny', 'Showers').")
-});
-export type WeatherDataPoint = z.infer<typeof WeatherDataPointSchema>;
 
 const GetWeatherForecastOutputSchema = z.object({
   forecast: z.array(WeatherDataPointSchema).describe('A 7-day weather forecast.'),

@@ -9,7 +9,8 @@ import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, Aler
 import { Button } from '@/components/ui/button';
 import { useLocation } from '@/lib/location';
 import { useEffect, useState, useMemo } from 'react';
-import { getWeatherForecast, WeatherDataPoint } from '@/ai/flows/get-weather-forecast';
+import { getWeatherForecast } from '@/ai/flows/get-weather-forecast';
+import { type WeatherDataPoint } from '@/ai/flows/weather-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
