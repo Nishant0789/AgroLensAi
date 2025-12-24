@@ -91,7 +91,10 @@ export default function GuidePage() {
         } as TranslateContentInput);
         setGuideData(translatedResult);
         if (translatedResult.suggestions.length > 0) {
-            const topCrop = translatedResult.suggestions[0];
+            const originalRoadmapCropName = result.roadmap.title.split(" for ")[1]?.split(" in ")[0];
+            const topCropIndex = result.suggestions.findIndex(s => s.name === originalRoadmapCropName);
+            const topCrop = translatedResult.suggestions[topCropIndex > -1 ? topCropIndex : 0];
+            
             setSelectedCrop(topCrop);
             setSelectedRoadmap(translatedResult.roadmap);
         }
@@ -132,11 +135,11 @@ export default function GuidePage() {
         setGuideData(translatedResult);
 
         if (translatedResult.suggestions.length > 0) {
-          // Find the original index of the selected crop to select the correct translated crop
+          // Find the original index of the top crop to select the correct translated crop
           const originalRoadmapCropName = originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0];
-          const originalIndex = originalGuideData.suggestions.findIndex(s => s.name === originalRoadmapCropName) || 0;
+          const topCropIndex = originalGuideData.suggestions.findIndex(s => s.name === originalRoadmapCropName);
           
-          const topCrop = translatedResult.suggestions[originalIndex];
+          const topCrop = translatedResult.suggestions[topCropIndex > -1 ? topCropIndex : 0];
 
           setSelectedCrop(topCrop);
           setSelectedRoadmap(translatedResult.roadmap);
@@ -371,5 +374,3 @@ export default function GuidePage() {
     </div>
   );
 }
-
-    
