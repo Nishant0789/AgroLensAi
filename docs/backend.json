@@ -31,19 +31,64 @@
           "description": "The user's last known longitude."
         },
         "city": {
-            "type": "string",
-            "description": "The user's city."
+          "type": "string",
+          "description": "The user's city."
         },
         "country": {
-            "type": "string",
-            "description": "The user's country."
-        },
-        "currentCrop": {
           "type": "string",
-          "description": "The crop the user is currently growing."
+          "description": "The user's country."
         }
       },
       "required": ["uid"]
+    },
+    "Field": {
+      "title": "Farm Field",
+      "description": "Represents a single field owned by a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "crop": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "name", "crop", "createdAt"]
+    },
+    "FarmingTask": {
+      "title": "Farming Task",
+      "description": "A specific task to be performed in a field on a certain date.",
+      "type": "object",
+      "properties": {
+        "fieldId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Watering", "Fertilizing", "Pest Control", "Planting", "Harvesting", "Other"]
+        },
+        "completed": {
+          "type": "boolean"
+        }
+      },
+      "required": ["fieldId", "title", "date", "category"]
     },
     "DiseaseAlert": {
       "title": "Disease Alert",
@@ -135,6 +180,18 @@
         "$ref": "#/entities/UserProfile"
       },
       "description": "Stores public profile information for each user."
+    },
+    "/users/{userId}/fields/{fieldId}": {
+      "schema": {
+        "$ref": "#/entities/Field"
+      },
+      "description": "Stores the fields owned by a user."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": {
+        "$ref": "#/entities/FarmingTask"
+      },
+      "description": "Stores the farming tasks for a user."
     },
     "/alerts/{alertId}": {
       "schema": {

@@ -18,6 +18,16 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && isOwner(userId);
     }
     
+    // Users can manage their own fields
+    match /users/{userId}/fields/{fieldId} {
+      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
+    }
+
+    // Users can manage their own tasks
+    match /users/{userId}/tasks/{taskId} {
+      allow read, create, update, delete: if isAuthenticated() && isOwner(userId);
+    }
+
     // Any authenticated user can create an alert
     match /alerts/{alertId} {
       allow create: if isAuthenticated();

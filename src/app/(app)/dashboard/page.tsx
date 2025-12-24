@@ -1,22 +1,25 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check, Leaf } from 'lucide-react';
+import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check, Leaf, Plus, Tractor, Calendar, Droplet, SunSnow, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocation } from '@/lib/location';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getWeatherForecast, WeatherDataPoint } from '@/ai/flows/get-weather-forecast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/auth.tsx';
-import { useCollection } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { CardSpotlight } from '@/components/ui/card-spotlight';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { generateTaskTimeline } from '@/ai/flows/task-generator';
+import { format, parseISO } from 'date-fns';
 
 const weatherIconMap: { [key: string]: React.ElementType } = {
     sun: Sun,
@@ -184,94 +187,281 @@ function WeatherCard() {
   );
 }
 
-type Scan = {
+// ====== New Components for Field & Task Management ======
+
+type Field = {
     id: string;
-    imageUrl: string;
-    createdAt: { seconds: number; nanoseconds: number };
-    disease: string;
+    name: string;
+    crop: string;
+    createdAt: { seconds: number };
+}
+
+type NewFieldInputs = {
+    name: string;
+    crop: string;
 };
 
-function FieldJournal() {
-  const { user } = useAuth();
-  const scansQuery = user 
-    ? query(
-        collection(user.firestore, `users/${user.uid}/scans`), 
-        orderBy('createdAt', 'desc'), 
-        limit(5)
-      ) 
-    : null;
-  const { data: scans, loading } = useCollection<Scan>(scansQuery);
+function AddFieldModal() {
+    const { user } = useAuth();
+    const firestore = useFirestore();
+    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<NewFieldInputs>();
+    const [isOpen, setIsOpen] = useState(false);
 
-  const formatDate = (timestamp: { seconds: number; nanoseconds: number; }) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp.seconds * 1000).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+    const onSubmit: SubmitHandler<NewFieldInputs> = async (data) => {
+        if (!user) return;
+        const fieldsCollection = collection(firestore, `users/${user.uid}/fields`);
+        await addDoc(fieldsCollection, {
+            ...data,
+            userId: user.uid,
+            createdAt: serverTimestamp(),
+        });
+        reset();
+        setIsOpen(false);
+    };
 
-  return (
-    <CardSpotlight className="mt-6">
-      <CardHeader>
-        <CardTitle>Field Journal (Recent Scans)</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading && (
-             <div className="flex flex-col items-center justify-center h-40 gap-2">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-muted-foreground">Loading journal...</p>
-            </div>
-        )}
-        {!loading && (!scans || scans.length === 0) && (
-            <div className="flex flex-col items-center justify-center h-40 gap-2 text-center">
-                 <Leaf className="w-8 h-8 text-muted-foreground" />
-                 <p className="text-muted-foreground max-w-sm">You haven't scanned any crops yet. Use the Crop Scanner to get started!</p>
-            </div>
-        )}
-        {!loading && scans && scans.length > 0 && (
-            <Table>
-            <TableHeader>
-                <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Diagnosis</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {scans.map((scan) => (
-                <motion.tr
-                    key={scan.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                    className="hover:bg-accent/20"
-                >
-                    <TableCell>
-                    <Image
-                        src={scan.imageUrl}
-                        alt="Scan of crop"
-                        width={60}
-                        height={40}
-                        className="rounded-md object-cover"
-                        data-ai-hint="crop leaf"
-                    />
-                    </TableCell>
-                    <TableCell>{formatDate(scan.createdAt)}</TableCell>
-                    <TableCell>
-                    <Badge variant={scan.disease.toLowerCase() === 'healthy' ? 'secondary' : 'destructive'}>
-                        {scan.disease}
-                    </Badge>
-                    </TableCell>
-                </motion.tr>
-                ))}
-            </TableBody>
-            </Table>
-        )}
-      </CardContent>
-    </CardSpotlight>
-  );
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <Plus className="mr-2" /> Add New Field
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add a New Field</DialogTitle>
+                    <DialogDescription>Enter the details for your new field to start tracking it.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="field-name" className="text-right">Field Name</Label>
+                            <Input id="field-name" {...register("name", { required: "Field name is required" })} className="col-span-3" placeholder="e.g., North Field"/>
+                            {errors.name && <p className="col-span-4 text-right text-sm text-destructive">{errors.name.message}</p>}
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="crop-name" className="text-right">Crop</Label>
+                            <Input id="crop-name" {...register("crop", { required: "Crop name is required" })} className="col-span-3" placeholder="e.g., Wheat"/>
+                            {errors.crop && <p className="col-span-4 text-right text-sm text-destructive">{errors.crop.message}</p>}
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="animate-spin mr-2"/>}
+                            Add Field
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
 }
+
+function MyFields() {
+    const { user } = useAuth();
+    const firestore = useFirestore();
+    const fieldsQuery = user ? query(collection(firestore, `users/${user.uid}/fields`), orderBy('createdAt', 'desc')) : null;
+    const { data: fields, loading } = useCollection<Field>(fieldsQuery);
+
+    return (
+        <CardSpotlight className="mt-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>My Fields</CardTitle>
+                    <CardDescription>Manage your fields and the crops you're growing.</CardDescription>
+                </div>
+                <AddFieldModal />
+            </CardHeader>
+            <CardContent>
+                {loading && <div className="text-center p-8"><Loader2 className="mx-auto animate-spin" /></div>}
+                {!loading && (!fields || fields.length === 0) ? (
+                    <div className="text-center text-muted-foreground p-8">
+                        <Tractor className="mx-auto h-12 w-12 mb-4"/>
+                        <h3 className="font-semibold">No fields yet</h3>
+                        <p>Add your first field to start getting personalized advice.</p>
+                    </div>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Field Name</TableHead>
+                                <TableHead>Crop</TableHead>
+                                <TableHead>Added On</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {fields?.map(field => (
+                                <TableRow key={field.id}>
+                                    <TableCell className="font-medium">{field.name}</TableCell>
+                                    <TableCell><Badge variant="secondary">{field.crop}</Badge></TableCell>
+                                    <TableCell>{field.createdAt ? new Date(field.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+        </CardSpotlight>
+    )
+}
+
+type Task = {
+    id: string;
+    fieldId: string;
+    title: string;
+    description: string;
+    date: string;
+    category: "Watering" | "Fertilizing" | "Pest Control" | "Planting" | "Harvesting" | "Other";
+    completed: boolean;
+}
+
+const categoryIcons = {
+    Watering: <Droplet className="text-blue-500" />,
+    Fertilizing: <Leaf className="text-green-500" />,
+    "Pest Control": <Bug className="text-red-500" />,
+    Planting: <Tractor className="text-yellow-500" />,
+    Harvesting: <Tractor className="text-purple-500" />,
+    Other: <SunSnow className="text-gray-500" />
+};
+
+function TaskTimeline() {
+    const { user } = useAuth();
+    const firestore = useFirestore();
+    const { location } = useLocation();
+
+    const fieldsQuery = user ? query(collection(firestore, `users/${user.uid}/fields`)) : null;
+    const { data: fields, loading: fieldsLoading } = useCollection<Field>(fieldsQuery);
+
+    const tasksQuery = user ? query(collection(firestore, `users/${user.uid}/tasks`), orderBy('date', 'asc')) : null;
+    const { data: tasks, loading: tasksLoading } = useCollection<Task>(tasksQuery);
+    
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const generateTasksForField = async (field: Field) => {
+        if (!user || !location || isGenerating) return;
+        setIsGenerating(true);
+
+        try {
+            const result = await generateTaskTimeline({
+                crop: field.crop,
+                location: {
+                    city: location.city,
+                    country: location.country,
+                    latitude: location.lat,
+                    longitude: location.lon,
+                },
+                // For simplicity, we assume planting date is the date the field was added.
+                // A more robust solution would ask the user for this.
+                plantingDate: format(new Date(field.createdAt.seconds * 1000), 'yyyy-MM-dd')
+            });
+
+            const tasksCollection = collection(firestore, `users/${user.uid}/tasks`);
+            for (const task of result.tasks) {
+                await addDoc(tasksCollection, {
+                    ...task,
+                    fieldId: field.id,
+                    completed: false,
+                });
+            }
+
+        } catch (error) {
+            console.error("Failed to generate tasks:", error);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleGenerateAllTasks = () => {
+        fields?.forEach(field => generateTasksForField(field));
+    }
+    
+    const handleToggleComplete = async (task: Task) => {
+      if (!user) return;
+      const taskDocRef = doc(firestore, `users/${user.uid}/tasks`, task.id);
+      await updateDoc(taskDocRef, { completed: !task.completed });
+    };
+
+    const groupedTasks = useMemo(() => {
+        if (!tasks) return {};
+        return tasks.reduce((acc, task) => {
+            const date = format(parseISO(task.date), 'EEEE, MMMM d');
+            if (!acc[date]) {
+                acc[date] = [];
+            }
+            acc[date].push(task);
+            return acc;
+        }, {} as Record<string, Task[]>);
+    }, [tasks]);
+
+    const fieldMap = useMemo(() => {
+        if (!fields) return {};
+        return fields.reduce((acc, field) => {
+            acc[field.id] = field.name;
+            return acc;
+        }, {} as Record<string, string>);
+    }, [fields]);
+
+
+    return (
+        <CardSpotlight className="mt-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Task Timeline</CardTitle>
+                    <CardDescription>Your AI-generated schedule for the upcoming week.</CardDescription>
+                </div>
+                 <Button onClick={handleGenerateAllTasks} disabled={isGenerating || fieldsLoading || !fields?.length}>
+                    {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <Calendar className="mr-2" />}
+                    Generate Tasks
+                </Button>
+            </CardHeader>
+            <CardContent>
+                {(tasksLoading || fieldsLoading) && <div className="text-center p-8"><Loader2 className="mx-auto animate-spin" /></div>}
+                
+                {!tasksLoading && !tasks?.length && (
+                    <div className="text-center text-muted-foreground p-8">
+                        <Calendar className="mx-auto h-12 w-12 mb-4"/>
+                        <h3 className="font-semibold">No tasks scheduled</h3>
+                        <p>Click "Generate Tasks" to create your personalized timeline.</p>
+                    </div>
+                )}
+                
+                <div className="space-y-6">
+                    {Object.entries(groupedTasks).map(([date, dateTasks]) => (
+                        <div key={date}>
+                            <h3 className="font-semibold mb-2 text-primary">{date}</h3>
+                            <div className="space-y-2">
+                                {dateTasks.map(task => (
+                                    <motion.div 
+                                        key={task.id}
+                                        className={`flex items-start gap-3 p-3 rounded-md transition-all ${task.completed ? 'bg-secondary/50 text-muted-foreground line-through' : 'bg-secondary/20'}`}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                    >
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleToggleComplete(task)}>
+                                          <Check className={`transition-all ${task.completed ? 'opacity-100' : 'opacity-0'}`} />
+                                        </Button>
+                                        <div className="flex-1">
+                                            <p className="font-medium">{task.title}</p>
+                                            <p className="text-sm text-muted-foreground">{task.description}</p>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <Badge variant="outline" className="flex items-center gap-1.5">
+                                                {categoryIcons[task.category as keyof typeof categoryIcons]}
+                                                {task.category}
+                                            </Badge>
+                                            <span className="text-xs text-muted-foreground mt-1">{fieldMap[task.fieldId] || '...'}</span>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </CardSpotlight>
+    )
+}
+
 
 export default function DashboardPage() {
   const FADE_IN = {
@@ -294,9 +484,18 @@ export default function DashboardPage() {
         variants={FADE_IN}
         initial="hidden"
         animate="visible"
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <MyFields />
+      </motion.div>
+
+      <motion.div
+        variants={FADE_IN}
+        initial="hidden"
+        animate="visible"
         transition={{ duration: 0.5, delay: 0.4 }}
       >
-        <FieldJournal />
+        <TaskTimeline />
       </motion.div>
     </div>
   );

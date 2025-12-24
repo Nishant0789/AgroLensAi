@@ -21,7 +21,6 @@ export type User = {
   displayName: string | null;
   photoURL: string | null;
   firestore: any; // Note: In a real app, you might want a more specific type
-  currentCrop?: string;
   phoneNumber?: string | null;
 };
 
@@ -60,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               photoURL: firebaseUser.photoURL,
               phoneNumber: firebaseUser.phoneNumber,
               createdAt: serverTimestamp(),
-              currentCrop: 'Wheat' // Default crop
             };
             await setDoc(userDocRef, newUserPayload, { merge: true });
             fullUser = { ...newUserPayload, firestore };
