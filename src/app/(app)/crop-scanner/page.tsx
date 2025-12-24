@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Lottie from 'lottie-react';
-import { Camera, Upload, CheckCircle, AlertTriangle, Loader, RefreshCw, Leaf, Siren, Sprout, TestTube2, Languages } from 'lucide-react';
+import { Camera, Upload, CheckCircle, AlertTriangle, Loader, RefreshCw, Leaf, Siren, Sprout, TestTube2, Languages, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -45,7 +45,7 @@ export default function CropScannerPage() {
   const [cooldown, setCooldown] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: userLoading } = useAuth();
   const firestore = useFirestore();
 
   useEffect(() => {
@@ -75,13 +75,11 @@ export default function CropScannerPage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Full reset when a new file is selected
         setImagePreview(reader.result as string);
         setStatus('idle');
         setResult(null);
         setOriginalResult(null);
         setError(null);
-        setCooldown(0);
       };
       reader.readAsDataURL(file);
     }
@@ -90,7 +88,6 @@ export default function CropScannerPage() {
   const handleScan = async () => {
     if (!imagePreview || !user || status === 'analyzing' || status === 'translating' || cooldown > 0) return;
     
-    setCooldown(10);
     setStatus('analyzing');
     setError(null);
     setResult(null);
@@ -119,6 +116,7 @@ export default function CropScannerPage() {
       }
       
       setStatus('success');
+      setCooldown(10);
 
       addDoc(collection(firestore, `users/${user.uid}/scans`), {
         userId: user.uid,
@@ -153,7 +151,6 @@ export default function CropScannerPage() {
         console.error("Error analyzing crop:", err);
         setError(err.message || "The AI assistant could not analyze the image. It might be busy. Please try again in a moment.");
         setStatus('error');
-        setCooldown(0);
     }
   };
 
@@ -222,19 +219,20 @@ export default function CropScannerPage() {
                   </Button>
               )}
 
-              {imagePreview && status !== 'analyzing' && status !== 'translating' && (
+              {imagePreview && (
                 <Button 
-                  onClick={() => {
-                    if (!user) {
-                      toast({ title: "Auth Error", description: "Please log in first", variant: "destructive" });
-                      return;
-                    }
-                    handleScan();
-                  }} 
-                  disabled={cooldown > 0 || !user}
+                  onClick={handleScan}
+                  disabled={isProcessing || cooldown > 0 || !user}
                   className="w-full relative z-50 bg-primary hover:opacity-90"
                 >
-                  {cooldown > 0 ? `Wait ${cooldown}s...` : 'Scan Crop'}
+                  {isProcessing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Scanning...
+                      </>
+                  ) : cooldown > 0 ? (
+                      `Wait ${cooldown}s...`
+                  ) : 'Scan Crop'}
                 </Button>
               )}
               
@@ -366,5 +364,3 @@ export default function CropScannerPage() {
     </div>
   );
 }
-
-    
