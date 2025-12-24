@@ -10,7 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { getWeatherForecast, WeatherDataPoint } from './get-weather-forecast';
+import { getWeatherForecast, WeatherDataPoint, WeatherDataPointSchema } from './get-weather-forecast';
 import { format, addDays } from 'date-fns';
 
 const TaskSchema = z.object({
