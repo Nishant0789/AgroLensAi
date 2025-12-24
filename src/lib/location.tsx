@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { getCoordinatesForCity } from '@/ai/flows/get-weather-forecast';
-import { type User, useAuth } from './auth.tsx';
+import { type User } from './auth.tsx';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 
@@ -75,9 +75,14 @@ export function LocationProvider({ children, user }: { children: ReactNode; user
             name: geoData.name,
         };
         setLocationData(newLocationData);
-    } catch (err) {
+    } catch (err: any) {
         console.error("Failed to set manual location:", err);
-        handleError(`Could not find location for "${city}". Please try another city.`);
+        const errorMessage = err.message || "An unknown error occurred.";
+        if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource has been exhausted')) {
+             handleError("The AI is currently busy or your free credits may have been used up. Please try again later.");
+        } else {
+             handleError(`Could not find location for "${city}". Please try another city.`);
+        }
     }
   }, [user]);
 

@@ -64,7 +64,6 @@ export default function CropScannerPage() {
     setResult(null);
     setOriginalResult(null);
     setError(null);
-    setCooldown(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -92,6 +91,7 @@ export default function CropScannerPage() {
     setError(null);
     setResult(null);
     setOriginalResult(null);
+    setCooldown(10);
     
     try {
       const analysisResult = await analyzeCrop({
@@ -116,7 +116,6 @@ export default function CropScannerPage() {
       }
       
       setStatus('success');
-      setCooldown(10);
 
       addDoc(collection(firestore, `users/${user.uid}/scans`), {
         userId: user.uid,
@@ -153,7 +152,12 @@ export default function CropScannerPage() {
       }
     } catch (err: any) {
         console.error("Error analyzing crop:", err);
-        setError(err.message || "The AI assistant could not analyze the image. It might be busy. Please try again in a moment.");
+        const errorMessage = err.message || "An unknown error occurred.";
+        if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource has been exhausted')) {
+            setError("The AI is currently busy or your free credits may have been used up. Please try again later.");
+        } else {
+            setError("The AI assistant could not analyze the image. It might be busy. Please try again in a moment.");
+        }
         setStatus('error');
     }
   };
@@ -176,9 +180,14 @@ export default function CropScannerPage() {
             targetLanguage: lang,
         } as TranslateContentInput);
         setResult(translatedResult);
-    } catch(err) {
+    } catch(err: any) {
         console.error("Error translating content:", err);
-        setError("Failed to translate the result. Please try again.");
+        const errorMessage = err.message || "An unknown error occurred.";
+        if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource has been exhausted')) {
+            setError("The AI is currently busy or your free credits may have been used up. Please try again later.");
+        } else {
+            setError("Failed to translate the result. Please try again.");
+        }
     } finally {
         setStatus('success');
     }

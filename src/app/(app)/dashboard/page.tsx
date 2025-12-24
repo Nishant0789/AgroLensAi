@@ -22,6 +22,7 @@ import { generateTaskTimeline } from '@/ai/flows/task-generator';
 import { format, parseISO, isFuture } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { type AnalyzeCropOutput } from '@/ai/ai-crop-scanner';
+import { useToast } from '@/hooks/use-toast';
 
 const weatherIconMap: { [key: string]: React.ElementType } = {
     sun: Sun,
@@ -282,6 +283,7 @@ function MyFieldsAndTasks() {
     const { user } = useAuth();
     const firestore = useFirestore();
     const { location } = useLocation();
+    const { toast } = useToast();
 
     const fieldsQuery = user ? query(collection(firestore, `users/${user.uid}/fields`), orderBy('createdAt', 'desc')) : null;
     const { data: fields, loading: fieldsLoading } = useCollection<Field>(fieldsQuery);
@@ -330,8 +332,22 @@ function MyFieldsAndTasks() {
             for (const task of result.tasks) {
                 await addDoc(tasksCollection, { ...task, fieldId: field.id, completed: false });
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to generate tasks:", error);
+            const errorMessage = error.message || "An unknown error occurred.";
+            if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource has been exhausted')) {
+                toast({
+                    title: "AI Busy",
+                    description: "The AI is currently busy or your free credits may have been used up. Please try again later.",
+                    variant: "destructive"
+                });
+            } else {
+                 toast({
+                    title: "Generation Failed",
+                    description: "Could not generate a timeline for this field.",
+                    variant: "destructive"
+                });
+            }
         } finally {
             setGeneratingFieldId(null);
         }
@@ -340,10 +356,20 @@ function MyFieldsAndTasks() {
     const refreshAllTasks = async () => {
         if (!fields) return;
         setIsRefreshingAll(true);
-        for (const field of fields) {
-            await generateTasksForField(field);
+        try {
+            for (const field of fields) {
+                await generateTasksForField(field);
+            }
+        } catch (error: any) {
+             console.error("Failed to refresh tasks:", error);
+             toast({
+                title: "Refresh Failed",
+                description: "Could not refresh all task timelines.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsRefreshingAll(false);
         }
-        setIsRefreshingAll(false);
     }
 
     const handleToggleComplete = async (task: Task) => {
@@ -362,7 +388,7 @@ function MyFieldsAndTasks() {
                     <CardDescription>Manage your fields and view their AI-generated timelines.</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button onClick={refreshAllTasks} disabled={isRefreshingAll || fieldsLoading || !fields?.length} size="sm" variant="secondary">
+                    <Button onClick={refreshAllTasks} disabled={isRefreshingAll || fieldsLoading || !fields?.length || !!generatingFieldId} size="sm" variant="secondary">
                         {isRefreshingAll ? <Loader2 className="animate-spin mr-2" /> : <Calendar className="mr-2" />}
                         {isRefreshingAll ? 'Refreshing...' : 'Refresh All Tasks'}
                     </Button>
@@ -435,7 +461,7 @@ function MyFieldsAndTasks() {
                                             ) : (
                                                 <div className="text-center p-4 text-muted-foreground">
                                                     <p className="mb-2">No tasks found for this field.</p>
-                                                    <Button onClick={() => generateTasksForField(field)} size="sm" disabled={isGenerating}>
+                                                    <Button onClick={() => generateTasksForField(field)} size="sm" disabled={isGenerating || isRefreshingAll}>
                                                         {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <Calendar className="mr-2" />}
                                                         {isGenerating ? 'Generating...' : 'Generate Timeline'}
                                                     </Button>
@@ -612,5 +638,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

@@ -57,9 +57,14 @@ export function Chatbot() {
       const result = await agroConsultantChatbot({ query: input, chatHistory });
       const assistantMessage: Message = { role: 'assistant', content: result.response };
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Chatbot error:', error);
-      const errorMessage: Message = { role: 'assistant', content: 'Sorry, I am having trouble connecting. Please try again later.' };
+      const errorMessageContent = error.message || "An unknown error occurred.";
+      let displayMessage = 'Sorry, I am having trouble connecting. Please try again later.';
+      if (errorMessageContent.includes('429') || errorMessageContent.toLowerCase().includes('rate limit') || errorMessageContent.toLowerCase().includes('resource has been exhausted')) {
+          displayMessage = "The AI is currently busy or your free credits may have been used up. Please try again later.";
+      }
+      const errorMessage: Message = { role: 'assistant', content: displayMessage };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);

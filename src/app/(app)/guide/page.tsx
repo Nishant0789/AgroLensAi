@@ -99,9 +99,14 @@ export default function GuidePage() {
             setSelectedRoadmap(translatedResult.roadmap);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Could not fetch your personalized guide. The AI assistant might be busy. Please try again in a moment.');
+      const errorMessage = err.message || "An unknown error occurred.";
+      if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource has been exhausted')) {
+          setError("The AI is currently busy or your free credits may have been used up. Please try again later.");
+      } else {
+          setError('Could not fetch your personalized guide. The AI assistant might be busy. Please try again in a moment.');
+      }
     } finally {
       setLoading(false);
     }
@@ -145,9 +150,14 @@ export default function GuidePage() {
           setSelectedRoadmap(translatedResult.roadmap);
         }
 
-    } catch (err) {
+    } catch (err: any) {
         console.error('Translation failed', err);
-        setError('Failed to translate the guide. Please try again.');
+        const errorMessage = err.message || "An unknown error occurred.";
+        if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource has been exhausted')) {
+            setError("The AI is currently busy or your free credits may have been used up. Please try again later.");
+        } else {
+            setError('Failed to translate the guide. Please try again.');
+        }
     } finally {
         setLoading(false);
     }
