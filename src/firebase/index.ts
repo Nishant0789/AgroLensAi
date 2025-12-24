@@ -30,46 +30,39 @@ let persistenceEnabled = false;
 function initializeFirebase() {
   if (typeof window !== 'undefined') {
     if (!getApps().length) {
+      // Initialize the app first
       firebaseApp = initializeApp(firebaseConfig);
-      auth = getAuth(firebaseApp);
+      
+      // Initialize Firestore with settings before getting the instance
       firestore = initializeFirestore(firebaseApp, {});
       
+      // Get auth instance
+      auth = getAuth(firebaseApp);
+      
+      // Now, enable persistence
       if (!persistenceEnabled) {
-        try {
-            enableIndexedDbPersistence(firestore)
-              .then(() => {
-                persistenceEnabled = true;
-              })
-              .catch((error: any) => {
-                  if (error.code !== 'failed-precondition') {
-                      console.error("Firebase persistence error:", error);
-                  }
-              });
-        } catch (error: any) {
-            console.error("Error enabling persistence:", error);
-        }
+        enableIndexedDbPersistence(firestore)
+          .then(() => {
+            persistenceEnabled = true;
+            console.log("Firebase persistence enabled.");
+          })
+          .catch((error: any) => {
+              if (error.code === 'failed-precondition') {
+                  // Multiple tabs open, persistence can only be enabled in one.
+                  // This is a normal scenario.
+              } else if (error.code === 'unimplemented') {
+                  // The current browser does not support all of the
+                  // features required to enable persistence
+              }
+              console.warn("Firebase persistence failed to enable:", error.message);
+          });
       }
-
     } else {
+      // If the app is already initialized, just get the instances.
+      // Persistence should have been handled in the initial setup.
       firebaseApp = getApp();
       auth = getAuth(firebaseApp);
       firestore = getFirestore(firebaseApp);
-      
-      if (!persistenceEnabled) {
-          try {
-              enableIndexedDbPersistence(firestore)
-                .then(() => {
-                  persistenceEnabled = true;
-                })
-                .catch((error: any) => {
-                    if (error.code !== 'failed-precondition') {
-                        console.error("Firebase persistence error:", error);
-                    }
-                });
-          } catch (error: any) {
-             console.error("Error enabling persistence:", error);
-          }
-      }
     }
   }
 
