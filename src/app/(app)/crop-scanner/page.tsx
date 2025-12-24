@@ -77,7 +77,9 @@ export default function CropScannerPage() {
   };
 
   const handleScan = async () => {
-    if (!imagePreview || !user || cooldown > 0) return;
+    if (!imagePreview || !user) return;
+    if (status === 'analyzing' || status === 'translating') return;
+
     setStatus('analyzing');
     setSubStatus('idle');
     setError(null);
@@ -246,7 +248,7 @@ export default function CropScannerPage() {
 
             {imagePreview && (
               <div className="flex flex-col w-full gap-2 mt-4">
-                 <Button onClick={handleScan} disabled={status === 'analyzing' || status === 'translating' || subStatus === 'sendingAlert' || !user || cooldown > 0} className="w-full">
+                 <Button onClick={handleScan} disabled={status === 'analyzing' || status === 'translating' || cooldown > 0} className="w-full">
                     {status === 'analyzing' ? <><Loader className="animate-spin mr-2"/>Analyzing...</> :
                      status === 'translating' ? <><Loader className="animate-spin mr-2"/>Translating...</> :
                      subStatus === 'sendingAlert' ? <><Share2 className="animate-pulse mr-2"/>Sending Alert...</> :
@@ -383,6 +385,3 @@ export default function CropScannerPage() {
     </div>
   );
 }
-
-    
-    
