@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AuthForm from '@/components/auth-form';
@@ -8,7 +8,7 @@ import Logo from '@/components/logo';
 import { useAuth } from '@/lib/auth.tsx';
 import { CardSpotlight } from '@/components/ui/card-spotlight';
 
-export default function AuthPage() {
+function AuthComponent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,4 +43,16 @@ export default function AuthPage() {
       </div>
     </div>
   );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-background/0">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <AuthComponent />
+    </Suspense>
+  )
 }
