@@ -23,17 +23,13 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
+        protocol: 'httpss',
         hostname: 'picsum.photos',
         port: '',
         pathname: '/**',
       },
     ],
   },
-  
-  // The following line is required for development in a cloud environment
-  // and can be removed when deploying to production.
-  skipMiddlewareUrlNormalize: true,
 };
 
 export default nextConfig;
