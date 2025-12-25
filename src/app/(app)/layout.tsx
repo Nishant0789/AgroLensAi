@@ -16,6 +16,8 @@ import { useAuth } from '@/lib/auth.tsx';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 
+export const maxDuration = 120;
+
 function UnreadAlertsBadge() {
   const { user } = useAuth();
   const firestore = useFirestore();
