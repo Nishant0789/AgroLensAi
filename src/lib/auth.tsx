@@ -10,7 +10,9 @@ import {
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  ConfirmationResult
+  ConfirmationResult,
+  isSignInWithEmailLink,
+  signInWithEmailLink
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -96,8 +98,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       await signInWithPopup(auth, provider);
       router.push('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in with Google: ", error);
+      // This provides more detailed error info in the console on the deployed site
+      if (error.code === 'auth/unauthorized-domain') {
+        console.error("This domain is not authorized for Firebase Authentication. Please add it to the Firebase Console's list of authorized domains.");
+      }
       setLoading(false);
     }
   };
