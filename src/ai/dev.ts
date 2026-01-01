@@ -6,4 +6,3 @@ import '@/ai/flows/agro-consultant-chatbot.ts';
 import '@/ai/flows/geo-location-alerts.ts';
 import '@/ai/flows/generate-preventive-measures.ts';
 import '@/ai/flows/translate-content.ts';
-import '@/ai/flows/task-generator.ts';

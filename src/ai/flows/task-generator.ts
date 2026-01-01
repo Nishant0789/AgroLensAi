@@ -8,11 +8,9 @@
  * - GenerateTaskTimelineOutput - Output for the function.
  */
 
-import { generativeAi } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { getWeatherForecast } from './get-weather-forecast';
-import { format } from 'date-fns';
-import { WeatherDataPointSchema } from './weather-types';
+import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 
 const TaskSchema = z.object({
   title: z.string().describe("A short, clear title for the task (e.g., 'Water the cornfield')."),
@@ -39,64 +37,76 @@ const GenerateTaskTimelineOutputSchema = z.object({
 export type GenerateTaskTimelineOutput = z.infer<typeof GenerateTaskTimelineOutputSchema>;
 
 
+// This function is NOT an AI flow. It's a rule-based task generator.
 export async function generateTaskTimeline(input: GenerateTaskTimelineInput): Promise<GenerateTaskTimelineOutput> {
-  // 1. Get the 7-day weather forecast for the field's location.
-  const weather = await getWeatherForecast({
-    latitude: input.location.latitude,
-    longitude: input.location.longitude,
-  });
+    const { crop, location, plantingDate } = input;
+    const tasks: z.infer<typeof TaskSchema>[] = [];
+    const today = new Date();
+    
+    // 1. Get the 7-day weather forecast.
+    const weather = await getWeatherForecast({
+        latitude: location.latitude,
+        longitude: location.longitude,
+    });
 
-  // 2. Call the AI flow with all the necessary context.
-  return taskGeneratorFlow({ ...input, weather });
+    const cropAgeInDays = differenceInDays(today, parseISO(plantingDate));
+
+    // Rule 1: Basic Watering Schedule
+    // Water every 3 days if no rain is forecast.
+    for (let i = 0; i < 7; i++) {
+        const checkDate = addDays(today, i);
+        const dayWeather = weather.forecast.find(f => f.day === format(checkDate, 'EEE') || (i === 0 && f.day === 'Today'));
+        
+        const hasRained = weather.forecast
+            .slice(Math.max(0, i-1), i+1) // check yesterday and today for rain
+            .some(d => d.icon.toLowerCase().includes('rain') || d.description.toLowerCase().includes('rain'));
+
+        if ((i % 3 === 0) && !hasRained) {
+            tasks.push({
+                title: `Water ${crop}`,
+                description: `Check soil moisture. Water deeply if dry, especially since no rain is forecast.`,
+                date: format(checkDate, 'yyyy-MM-dd'),
+                category: 'Watering',
+            });
+        }
+    }
+
+    // Rule 2: Fertilizing based on crop age
+    // Fertilize once a week for the first month.
+    if (cropAgeInDays < 30 && (cropAgeInDays % 7 === 0 || tasks.length < 2)) {
+         tasks.push({
+            title: `Apply starter fertilizer for ${crop}`,
+            description: `Apply a balanced starter fertilizer to encourage root development.`,
+            date: format(addDays(today, 1), 'yyyy-MM-dd'),
+            category: 'Fertilizing',
+        });
+    }
+
+    // Rule 3: Pest control check
+    // Check for pests every 5 days.
+    if (cropAgeInDays > 14 && (cropAgeInDays % 5 === 0 || tasks.length < 3)) {
+         tasks.push({
+            title: `Inspect ${crop} for pests`,
+            description: `Check leaves and stems for common pests. Early detection is key.`,
+            date: format(addDays(today, 2), 'yyyy-MM-dd'),
+            category: 'Pest Control',
+        });
+    }
+
+    // Rule 4: General checkup
+    tasks.push({
+        title: `General field inspection`,
+        description: `Walk the field to check for weeds, signs of stress, and overall crop health.`,
+        date: format(addDays(today, 4), 'yyyy-MM-dd'),
+        category: 'Other',
+    });
+
+
+    // Sort tasks by date
+    tasks.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    // Remove duplicate dates, keeping the first one
+    const uniqueTasks = Array.from(new Map(tasks.map(task => [task.date, task])).values());
+
+    return { tasks: uniqueTasks.slice(0, 7) }; // Return up to 7 tasks
 }
-
-
-// Internal type for the flow, which includes the weather data
-const TaskGeneratorFlowInputSchema = GenerateTaskTimelineInputSchema.extend({
-  weather: z.object({
-    forecast: z.array(WeatherDataPointSchema),
-  }).describe("The 7-day weather forecast."),
-});
-
-
-const prompt = generativeAi.definePrompt({
-  name: 'taskGeneratorPrompt',
-  input: { schema: TaskGeneratorFlowInputSchema },
-  output: { schema: GenerateTaskTimelineOutputSchema },
-  prompt: `You are an expert agronomist creating a personalized task schedule for a farmer.
-
-  **Farmer's Context:**
-  - **Crop:** {{{crop}}}
-  - **Location:** {{{location.city}}}, {{{location.country}}}
-  - **Planting Date:** {{{plantingDate}}}
-  - **Today's Date:** ${format(new Date(), 'yyyy-MM-dd')}
-
-  **Upcoming 7-Day Weather Forecast:**
-  {{#each weather.forecast}}
-  - **{{day}} ({{temp}}°C):** {{description}}
-  {{/each}}
-
-  **Your Task:**
-  Based on the crop type, its growth stage (calculated from the planting date), the location, and the weather forecast, generate a list of critical farming tasks for the next 7-14 days. 
-  
-  **Instructions:**
-  - Be specific and actionable. For example, instead of "Water the crops," say "Water the crops deeply on Tuesday before the heatwave on Wednesday."
-  - Prioritize tasks based on the weather. If rain is forecasted, delay watering. If it's going to be very hot, suggest adding mulch or checking for heat stress.
-  - The 'date' for each task must be in YYYY-MM-DD format.
-  - Create tasks for different categories like Watering, Fertilizing, and Pest Control.
-  - The output must be a valid JSON object matching the provided schema.
-  `,
-  model: 'googleai/gemini-2.5-flash-lite',
-});
-
-const taskGeneratorFlow = generativeAi.defineFlow(
-  {
-    name: 'taskGeneratorFlow',
-    inputSchema: TaskGeneratorFlowInputSchema,
-    outputSchema: GenerateTaskTimelineOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
-    return output!;
-  }
-);
