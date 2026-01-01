@@ -9,7 +9,7 @@
  * - PersonalizedGuideOutput - The return type for the function.
  */
 
-import {ai} from '@/ai/genkit';
+import {generativeAi} from '@/ai/genkit';
 import {z} from 'genkit';
 
 // Input Schema for the main flow
@@ -58,7 +58,7 @@ export async function generatePersonalizedGuide(input: PersonalizedGuideInput): 
   return personalizedGuideFlow(input);
 }
 
-const personalizedGuidePrompt = ai.definePrompt({
+const personalizedGuidePrompt = generativeAi.definePrompt({
     name: 'personalizedGuidePrompt',
     input: { schema: PersonalizedGuideInputSchema },
     output: { schema: PersonalizedGuideOutputSchema },
@@ -84,7 +84,7 @@ const personalizedGuidePrompt = ai.definePrompt({
 });
 
 
-const personalizedGuideFlow = ai.defineFlow(
+const personalizedGuideFlow = generativeAi.defineFlow(
   {
     name: 'personalizedGuideFlow',
     inputSchema: PersonalizedGuideInputSchema,
