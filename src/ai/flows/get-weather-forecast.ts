@@ -59,8 +59,8 @@ const wmoCodeToIconAndDescription: { [key: number]: { icon: string, description:
 };
 
 
-// Function to fetch real weather data from Open-Meteo API.
-export async function fetchWeatherDataFromApi({ latitude, longitude }: GetWeatherForecastInput): Promise<GetWeatherForecastOutput> {
+// This is the primary function to get weather data. It does not use AI.
+export async function getWeatherForecast({ latitude, longitude }: GetWeatherForecastInput): Promise<GetWeatherForecastOutput> {
     try {
       const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max&timezone=auto`;
       const response = await fetch(apiUrl);
@@ -95,7 +95,7 @@ export async function fetchWeatherDataFromApi({ latitude, longitude }: GetWeathe
       return { forecast };
 
     } catch (error) {
-      console.error("Error in fetchWeatherDataFromApi:", error);
+      console.error("Error in getWeatherForecast:", error);
       // Fallback to mock data on API failure to prevent app crash
       return { 
         forecast: [
@@ -110,25 +110,6 @@ export async function fetchWeatherDataFromApi({ latitude, longitude }: GetWeathe
       };
     }
 }
-
-
-const getWeatherForecastFlow = ai.defineFlow(
-  {
-    name: 'getWeatherForecastFlow',
-    inputSchema: GetWeatherForecastInputSchema,
-    outputSchema: GetWeatherForecastOutputSchema,
-  },
-  async (input) => {
-    // Call the function directly for reliability instead of using an AI tool.
-    const forecast = await fetchWeatherDataFromApi(input);
-    return forecast;
-  }
-);
-
-export async function getWeatherForecast(input: GetWeatherForecastInput): Promise<GetWeatherForecastOutput> {
-  return getWeatherForecastFlow(input);
-}
-
 
 // Flow for converting city name to coordinates
 const GeocodeInputSchema = z.object({
