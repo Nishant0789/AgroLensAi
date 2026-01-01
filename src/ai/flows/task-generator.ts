@@ -8,7 +8,7 @@
  * - GenerateTaskTimelineOutput - Output for the function.
  */
 
-import { ai } from '@/ai/genkit';
+import { guideAi } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getWeatherForecast } from './get-weather-forecast';
 import { format } from 'date-fns';
@@ -59,7 +59,7 @@ const TaskGeneratorFlowInputSchema = GenerateTaskTimelineInputSchema.extend({
 });
 
 
-const prompt = ai.definePrompt({
+const prompt = guideAi.definePrompt({
   name: 'taskGeneratorPrompt',
   input: { schema: TaskGeneratorFlowInputSchema },
   output: { schema: GenerateTaskTimelineOutputSchema },
@@ -89,7 +89,7 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-2.5-flash-lite',
 });
 
-const taskGeneratorFlow = ai.defineFlow(
+const taskGeneratorFlow = guideAi.defineFlow(
   {
     name: 'taskGeneratorFlow',
     inputSchema: TaskGeneratorFlowInputSchema,
