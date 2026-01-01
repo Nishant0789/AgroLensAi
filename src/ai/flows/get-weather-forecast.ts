@@ -117,15 +117,6 @@ const getWeatherTool = ai.defineTool(
   }
 );
 
-
-const prompt = ai.definePrompt({
-    name: 'weatherForecastPrompt',
-    system: "You are a weather assistant. Use the provided tool to get the 7-day forecast for the given location and return it to the user in the specified format.",
-    tools: [getWeatherTool],
-    output: { schema: GetWeatherForecastOutputSchema },
-    model: 'googleai/gemini-2.5-flash-lite',
-});
-
 const getWeatherForecastFlow = ai.defineFlow(
   {
     name: 'getWeatherForecastFlow',
@@ -133,7 +124,7 @@ const getWeatherForecastFlow = ai.defineFlow(
     outputSchema: GetWeatherForecastOutputSchema,
   },
   async (input) => {
-    // Call the tool directly for reliability instead of relying on the prompt.
+    // Call the tool directly for reliability instead of relying on a prompt.
     const forecast = await getWeatherTool(input);
     return forecast;
   }
