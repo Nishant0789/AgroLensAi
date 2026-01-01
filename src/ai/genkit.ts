@@ -1,22 +1,17 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
 
-// Default AI instance using the main API key
+// AI instance for frequent, interactive tasks like scanning and chatting.
+export const interactiveAi = genkit({
+  plugins: [googleAI({apiKey: process.env.GEMINI_API_KEY_PRIMARY || process.env.GEMINI_API_KEY})],
+});
+
+// AI instance for less frequent, heavy generative tasks like guides and timelines.
+export const generativeAi = genkit({
+    plugins: [googleAI({apiKey: process.env.GEMINI_API_KEY_SECONDARY || process.env.GEMINI_API_KEY})],
+});
+
+// Fallback/Default AI instance
 export const ai = genkit({
   plugins: [googleAI({apiKey: process.env.GEMINI_API_KEY})],
-});
-
-// AI instance specifically for the Crop Scanner
-export const scannerAi = genkit({
-  plugins: [googleAI({apiKey: process.env.GEMINI_API_KEY_SCANNER || process.env.GEMINI_API_KEY})],
-});
-
-// AI instance specifically for the Chatbot
-export const chatAi = genkit({
-    plugins: [googleAI({apiKey: process.env.GEMINI_API_KEY_CHAT || process.env.GEMINI_API_KEY})],
-});
-
-// AI instance for the Guide and other generated content
-export const guideAi = genkit({
-    plugins: [googleAI({apiKey: process.env.GEMINI_API_KEY_GUIDE || process.env.GEMINI_API_KEY})],
 });

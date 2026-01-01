@@ -8,7 +8,7 @@
  * - AnalyzeCropOutput - The return type for the analyzeCrop function.
  */
 
-import {scannerAi} from '@/ai/genkit';
+import {interactiveAi} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AnalyzeCropInputSchema = z.object({
@@ -37,7 +37,7 @@ export async function analyzeCrop(input: AnalyzeCropInput): Promise<AnalyzeCropO
   return analyzeCropFlow(input);
 }
 
-const prompt = scannerAi.definePrompt({
+const prompt = interactiveAi.definePrompt({
   name: 'analyzeCropPrompt',
   input: {schema: AnalyzeCropInputSchema},
   output: {schema: AnalyzeCropOutputSchema},
@@ -58,7 +58,7 @@ const prompt = scannerAi.definePrompt({
   model: 'googleai/gemini-2.5-flash-lite',
 });
 
-const analyzeCropFlow = scannerAi.defineFlow(
+const analyzeCropFlow = interactiveAi.defineFlow(
   {
     name: 'analyzeCropFlow',
     inputSchema: AnalyzeCropInputSchema,
