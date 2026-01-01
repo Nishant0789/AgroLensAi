@@ -350,27 +350,27 @@ export default function CropScannerPage() {
                                     <p className="text-sm text-muted-foreground whitespace-pre-line">{result.chemicalSolution}</p>
                                 </AccordionContent>
                             </AccordionItem>
-
+                            
                             <AccordionItem value="prevention">
                                 <AccordionTrigger>
-                                  <div className="flex items-center gap-2">
-                                    <Sprout className="text-blue-500" /> Prevention
-                                  </div>
+                                    <div className="flex items-center gap-2">
+                                        <Sprout className="text-primary"/> Prevention
+                                    </div>
                                 </AccordionTrigger>
                                 <AccordionContent>
                                     <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-                                        {result.prevention.map((item, i) => <li key={i}>{item}</li>)}
+                                        {result.prevention.map((p, i) => <li key={i}>{p}</li>)}
                                     </ul>
                                 </AccordionContent>
                             </AccordionItem>
                           </>
                         ) : (
-                            <div className="text-center text-muted-foreground pt-4">
-                                <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-2"/>
-                                <p className="font-semibold">Your crop looks great!</p>
-                                <p className="text-sm">Keep up the good work.</p>
+                            <div className="text-center text-muted-foreground p-4">
+                                <Leaf className="mx-auto h-12 w-12 text-green-500 mb-4"/>
+                                <h3 className="font-semibold">Your crop looks great!</h3>
+                                <p>Keep up the good work.</p>
                             </div>
-                         )}
+                        )}
                       </Accordion>
                     </div>
                   )}
@@ -381,3 +381,4 @@ export default function CropScannerPage() {
       </div>
     </div>
   );
+}
