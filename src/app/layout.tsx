@@ -3,7 +3,6 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth.tsx';
 import { FirebaseClientProvider } from '@/firebase';
-import Background from '@/components/background';
 
 export const metadata: Metadata = {
   title: 'AgroLens AI',
@@ -34,7 +33,6 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <Background />
         <FirebaseClientProvider>
           <AuthProvider>
             {children}
