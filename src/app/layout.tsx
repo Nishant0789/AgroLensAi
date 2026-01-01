@@ -34,7 +34,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <Waves />
+        <Waves strokeColor="hsl(0 0% 50% / 0.2)" />
         <FirebaseClientProvider>
           <AuthProvider>
             {children}

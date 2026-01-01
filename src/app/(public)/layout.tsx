@@ -7,7 +7,7 @@ export default function PublicLayout({
 }) {
   return (
     <div className="relative min-h-screen">
-      <Waves />
+      <Waves strokeColor="hsl(0 0% 50% / 0.2)" />
       {children}
     </div>
   );
