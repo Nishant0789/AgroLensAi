@@ -6,7 +6,7 @@
  * - translateContent - A function that handles the translation.
  */
 
-import { generativeAi } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import {
   TranslateContentInputSchema,
   TranslateContentOutputSchema,
@@ -62,7 +62,7 @@ export async function translateContent(input: TranslateContentInput): Promise<Tr
 }
 
 
-const translateContentFlow = generativeAi.defineFlow(
+const translateContentFlow = ai.defineFlow(
   {
     name: 'translateContentFlow',
     inputSchema: TranslateContentInputSchema,
@@ -77,7 +77,7 @@ const translateContentFlow = generativeAi.defineFlow(
     }
 
     // 2. Call the LLM to translate them in a batch
-    const translationResult = await generativeAi.generate({
+    const translationResult = await ai.generate({
       prompt: `Translate the following array of strings into ${targetLanguage}. Maintain the array structure and the order of the strings.
 
       Strings to translate:

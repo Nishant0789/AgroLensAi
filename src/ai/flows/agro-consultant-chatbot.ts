@@ -8,7 +8,7 @@
  * - AgroConsultantChatbotOutput - The return type for the agroConsultantChatbot function.
  */
 
-import {interactiveAi} from '@/ai/genkit';
+import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import Handlebars from 'handlebars';
 
@@ -39,7 +39,7 @@ export async function agroConsultantChatbot(input: AgroConsultantChatbotInput): 
   return agroConsultantChatbotFlow(input);
 }
 
-const prompt = interactiveAi.definePrompt({
+const prompt = ai.definePrompt({
   name: 'agroConsultantChatbotPrompt',
   input: {schema: AgroConsultantChatbotInputSchema},
   output: {schema: AgroConsultantChatbotOutputSchema},
@@ -64,7 +64,7 @@ Response: `,
   },
 });
 
-const agroConsultantChatbotFlow = interactiveAi.defineFlow(
+const agroConsultantChatbotFlow = ai.defineFlow(
   {
     name: 'agroConsultantChatbotFlow',
     inputSchema: AgroConsultantChatbotInputSchema,
