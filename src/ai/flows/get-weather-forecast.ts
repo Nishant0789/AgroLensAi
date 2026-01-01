@@ -12,6 +12,8 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { format, addDays } from 'date-fns';
 import { WeatherDataPointSchema, type WeatherDataPoint } from './weather-types';
+import fetch from 'node-fetch';
+
 
 const GetWeatherForecastInputSchema = z.object({
   latitude: z.number().describe('The latitude of the location.'),
@@ -44,7 +46,7 @@ const wmoCodeToIconAndDescription: { [key: number]: { icon: string, description:
   67: { icon: 'Rain', description: 'Heavy freezing rain' },
   71: { icon: 'Snow', description: 'Slight snow fall' },
   73: { icon: 'Snow', description: 'Moderate snow fall' },
-  75: { icon: 'Snow', description: 'Heavy snow fall' },
+  75: { icon: 'Snow', 'description': 'Heavy snow fall' },
   77: { icon: 'Snow', description: 'Snow grains' },
   80: { icon: 'Rain', description: 'Slight rain showers' },
   81: { icon: 'Rain', description: 'Moderate rain showers' },
@@ -57,22 +59,15 @@ const wmoCodeToIconAndDescription: { [key: number]: { icon: string, description:
 };
 
 
-// Tool to fetch real weather data from Open-Meteo API.
-const getWeatherTool = ai.defineTool(
-  {
-    name: 'getWeatherTool',
-    description: 'Returns a 7-day weather forecast for the given coordinates from Open-Meteo API.',
-    inputSchema: GetWeatherForecastInputSchema,
-    outputSchema: GetWeatherForecastOutputSchema,
-  },
-  async ({ latitude, longitude }) => {
+// Function to fetch real weather data from Open-Meteo API.
+export async function fetchWeatherDataFromApi({ latitude, longitude }: GetWeatherForecastInput): Promise<GetWeatherForecastOutput> {
     try {
       const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max&timezone=auto`;
       const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch weather data: ${response.statusText}`);
       }
-      const data = await response.json();
+      const data: any = await response.json();
 
       if (!data.daily || !data.daily.time || !data.daily.temperature_2m_max) {
         throw new Error("Invalid weather data format from API.");
@@ -100,7 +95,7 @@ const getWeatherTool = ai.defineTool(
       return { forecast };
 
     } catch (error) {
-      console.error("Error in getWeatherTool:", error);
+      console.error("Error in fetchWeatherDataFromApi:", error);
       // Fallback to mock data on API failure to prevent app crash
       return { 
         forecast: [
@@ -114,8 +109,8 @@ const getWeatherTool = ai.defineTool(
         ]
       };
     }
-  }
-);
+}
+
 
 const getWeatherForecastFlow = ai.defineFlow(
   {
@@ -124,8 +119,8 @@ const getWeatherForecastFlow = ai.defineFlow(
     outputSchema: GetWeatherForecastOutputSchema,
   },
   async (input) => {
-    // Call the tool directly for reliability instead of relying on a prompt.
-    const forecast = await getWeatherTool(input);
+    // Call the function directly for reliability instead of using an AI tool.
+    const forecast = await fetchWeatherDataFromApi(input);
     return forecast;
   }
 );
