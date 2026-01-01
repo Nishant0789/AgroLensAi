@@ -4,18 +4,19 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check, Leaf, Plus, Tractor, Calendar, Droplet, SunSnow, Bug, History, CheckCircle, Siren, Eye } from 'lucide-react';
+import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, AlertTriangle, Edit, Check, Leaf, Plus, Tractor, Calendar, Droplet, SunSnow, Bug, History, CheckCircle, Siren, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocation } from '@/lib/location';
 import { useEffect, useState, useMemo } from 'react';
 import { getWeatherForecast } from '@/ai/flows/get-weather-forecast';
 import { type WeatherDataPoint } from '@/ai/flows/weather-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/auth.tsx';
 import { useCollection, useFirestore } from '@/firebase';
-import { collection, query, orderBy, limit, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, updateDoc, doc, deleteDoc, writeBatch, getDocs, where } from 'firebase/firestore';
 import { CardSpotlight } from '@/components/ui/card-spotlight';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { generateTaskTimeline } from '@/ai/flows/task-generator';
@@ -293,6 +294,8 @@ function MyFieldsAndTasks() {
     
     const [generatingFieldId, setGeneratingFieldId] = useState<string | null>(null);
     const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+    const [fieldToDelete, setFieldToDelete] = useState<Field | null>(null);
+
 
     // Group tasks by field ID for easy lookup
     const tasksByField = useMemo(() => {
@@ -319,7 +322,7 @@ function MyFieldsAndTasks() {
         try {
             const plantingDate = field.createdAt 
                 ? new Date(field.createdAt.seconds * 1000)
-                : new Date(); // Fallback to now if createdAt is not available yet
+                : new Date();
 
             const result = await generateTaskTimeline({
                 crop: field.crop,
@@ -381,10 +384,37 @@ function MyFieldsAndTasks() {
         const taskDocRef = doc(firestore, `users/${user.uid}/tasks`, task.id);
         await updateDoc(taskDocRef, { completed: !task.completed });
     };
+
+    const handleDeleteTask = async (taskId: string) => {
+        if (!user) return;
+        const taskDocRef = doc(firestore, `users/${user.uid}/tasks`, taskId);
+        await deleteDoc(taskDocRef);
+    }
+    
+    const handleDeleteField = async () => {
+        if (!user || !fieldToDelete) return;
+        
+        const fieldDocRef = doc(firestore, `users/${user.uid}/fields`, fieldToDelete.id);
+        
+        // Find and delete all tasks for this field
+        const tasksQuery = query(collection(firestore, `users/${user.uid}/tasks`), where('fieldId', '==', fieldToDelete.id));
+        const tasksSnapshot = await getDocs(tasksQuery);
+        const batch = writeBatch(firestore);
+        tasksSnapshot.forEach(taskDoc => {
+            batch.delete(taskDoc.ref);
+        });
+
+        // Delete the field itself
+        batch.delete(fieldDocRef);
+
+        await batch.commit();
+        setFieldToDelete(null); // Close the dialog
+    }
     
     const isLoading = fieldsLoading || tasksLoading;
 
     return (
+        <>
         <CardSpotlight className="mt-6">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -433,6 +463,14 @@ function MyFieldsAndTasks() {
                                                         <p className="font-semibold text-muted-foreground">All caught up!</p>
                                                     )}
                                                 </div>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 z-10 hover:bg-destructive/10 hover:text-destructive"
+                                                    onClick={(e) => { e.stopPropagation(); setFieldToDelete(field); }}
+                                                >
+                                                    <Trash2 className="h-4 w-4"/>
+                                                </Button>
                                             </div>
                                         </AccordionTrigger>
                                         <AccordionContent className="px-4 pb-4">
@@ -452,12 +490,22 @@ function MyFieldsAndTasks() {
                                                                 <p className={`font-medium ${task.completed && 'line-through'}`}>{task.title}</p>
                                                                 <p className="text-sm text-muted-foreground">{task.description}</p>
                                                             </div>
-                                                            <div className="flex flex-col items-end text-right">
-                                                                <Badge variant="outline" className="flex items-center gap-1.5 mb-1">
-                                                                    {categoryIcons[task.category as keyof typeof categoryIcons]}
-                                                                    {task.category}
-                                                                </Badge>
-                                                                <span className="text-xs text-muted-foreground">{format(parseISO(task.date), 'EEEE, MMM d')}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="flex flex-col items-end text-right">
+                                                                    <Badge variant="outline" className="flex items-center gap-1.5 mb-1">
+                                                                        {categoryIcons[task.category as keyof typeof categoryIcons]}
+                                                                        {task.category}
+                                                                    </Badge>
+                                                                    <span className="text-xs text-muted-foreground">{format(parseISO(task.date), 'EEEE, MMM d')}</span>
+                                                                </div>
+                                                                 <Button 
+                                                                    variant="ghost" 
+                                                                    size="icon" 
+                                                                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                                                                    onClick={() => handleDeleteTask(task.id)}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4"/>
+                                                                </Button>
                                                             </div>
                                                         </motion.div>
                                                     ))}
@@ -480,6 +528,22 @@ function MyFieldsAndTasks() {
                 )}
             </CardContent>
         </CardSpotlight>
+
+        <AlertDialog open={!!fieldToDelete} onOpenChange={(open) => !open && setFieldToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to delete this field?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the field "{fieldToDelete?.name}" and all of its associated tasks. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteField} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        </>
     )
 }
 
