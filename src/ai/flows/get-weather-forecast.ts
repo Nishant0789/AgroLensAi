@@ -9,7 +9,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { format, addDays } from 'date-fns';
 import { WeatherDataPointSchema, type WeatherDataPoint } from './weather-types';
 import fetch from 'node-fetch';
@@ -111,12 +111,7 @@ export async function getWeatherForecast({ latitude, longitude }: GetWeatherFore
     }
 }
 
-// Flow for converting city name to coordinates
-const GeocodeInputSchema = z.object({
-  city: z.string().describe('The name of the city.'),
-});
-export type GeocodeInput = z.infer<typeof GeocodeInputSchema>;
-
+// Data structure for the output of the geocoding service.
 const GeocodeOutputSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
@@ -126,50 +121,33 @@ const GeocodeOutputSchema = z.object({
 });
 export type GeocodeOutput = z.infer<typeof GeocodeOutputSchema>;
 
-// In a real app, this would use a geocoding service. Here we mock it.
-const geocodeTool = ai.defineTool({
-  name: 'geocodeTool',
-  description: 'Converts a city name to geographic coordinates.',
-  inputSchema: GeocodeInputSchema,
-  outputSchema: GeocodeOutputSchema,
-}, async ({ city }) => {
-  console.log(`Geocoding (mock) for: ${city}`);
-  const cityLower = city.toLowerCase();
-
-  // Simple mock. A real implementation would call a geocoding API.
-  if (cityLower.includes('bhatni')) {
-    return { latitude: 26.3833, longitude: 83.9333, city: 'Bhatni', country: 'India', name: 'Bhatni, Uttar Pradesh' };
-  }
-  if (cityLower.includes('delhi')) {
-      return { latitude: 28.7041, longitude: 77.1025, city: 'Delhi', country: 'India', name: 'Delhi, India' };
-  }
-  if (cityLower.includes('mumbai')) {
-      return { latitude: 19.0760, longitude: 72.8777, city: 'Mumbai', country: 'India', name: 'Mumbai, India' };
-  }
-  // Default to Gorakhpur if not found
-  return { latitude: 26.7606, longitude: 83.3732, city: 'Gorakhpur', country: 'India', name: 'Gorakhpur, India' };
-});
-
-
-const geocodePrompt = ai.definePrompt({
-    name: 'geocodePrompt',
-    system: "Use the geocode tool to find the coordinates for the given city.",
-    tools: [geocodeTool],
-    output: { schema: GeocodeOutputSchema },
-    model: 'googleai/gemini-2.5-flash-lite',
-});
-
-
-const geocodeFlow = ai.defineFlow({
-    name: 'geocodeFlow',
-    inputSchema: GeocodeInputSchema,
-    outputSchema: GeocodeOutputSchema,
-}, async(input) => {
-    const { output } = await geocodePrompt({city: input.city});
-    return output!;
-});
-
-
+// Converts a city name to geographic coordinates using a public API. No AI.
 export async function getCoordinatesForCity(city: string): Promise<GeocodeOutput> {
-  return geocodeFlow({ city });
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Geocoding API failed with status: ${response.status}`);
+        }
+        const data = await response.json();
+        const result = data.results?.[0];
+
+        if (!result) {
+            throw new Error(`No results found for city: ${city}`);
+        }
+
+        return {
+            latitude: result.latitude,
+            longitude: result.longitude,
+            city: result.name,
+            country: result.country,
+            name: `${result.name}, ${result.country}`,
+        };
+
+    } catch (error) {
+        console.error(`Error geocoding city "${city}":`, error);
+        // Throw a user-friendly error to be caught by the caller
+        throw new Error(`Could not find location data for "${city}". Please try a different city name.`);
+    }
 }
