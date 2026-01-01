@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import Lottie from 'lottie-react';
+import dynamic from 'next/dynamic';
 import { Camera, Upload, CheckCircle, AlertTriangle, Loader, RefreshCw, Leaf, Siren, Sprout, TestTube2, Languages, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CardContent } from '@/components/ui/card';
@@ -19,6 +19,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { translateContent } from '@/ai/flows/translate-content';
 import { type TranslateContentInput } from '@/ai/flows/translate-content-types';
 import { CardSpotlight } from '@/components/ui/card-spotlight';
+
+const Lottie = dynamic(() => import('lottie-react'), {
+  loading: () => <Loader className="w-12 h-12 animate-spin text-primary mb-4" />,
+});
+
 
 type ScanResult = AnalyzeCropOutput;
 type Status = 'idle' | 'analyzing' | 'translating' | 'success' | 'error';
@@ -376,4 +381,3 @@ export default function CropScannerPage() {
       </div>
     </div>
   );
-}
