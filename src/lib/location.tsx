@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { getCoordinatesForCity } from '@/ai/flows/get-weather-forecast';
 import { type User } from './auth.tsx';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 
 
 type LocationData = {
@@ -32,14 +32,14 @@ const GORAKHPUR_LOCATION: LocationData = {
     name: "Gorakhpur, India",
 }
 
-export function LocationProvider({ children, user }: { children: ReactNode; user: User }) {
+export function LocationProvider({ children, user, firestore }: { children: ReactNode; user: User, firestore: Firestore }) {
   const [location, setLocationState] = useState<LocationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const updateLocationInFirestore = (loc: LocationData) => {
-    if (user && user.firestore) {
-      const userDocRef = doc(user.firestore, 'users', user.uid);
+    if (user && firestore) {
+      const userDocRef = doc(firestore, 'users', user.uid);
       setDoc(userDocRef, { 
         latitude: loc.lat,
         longitude: loc.lon,
@@ -84,7 +84,7 @@ export function LocationProvider({ children, user }: { children: ReactNode; user
              handleError(`Could not find location for "${city}". Please try another city.`);
         }
     }
-  }, [user]);
+  }, [user, firestore]);
 
   const fetchLocation = useCallback(async () => {
     setLoading(true);
@@ -154,7 +154,7 @@ export function LocationProvider({ children, user }: { children: ReactNode; user
         handleError(errorMessage);
         setLocationData(GORAKHPUR_LOCATION);
     }
-  }, [user]);
+  }, [user, firestore]);
 
   useEffect(() => {
     if (user) {

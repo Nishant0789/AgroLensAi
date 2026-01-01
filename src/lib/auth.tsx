@@ -22,7 +22,6 @@ export type User = {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  firestore: any; // Note: In a real app, you might want a more specific type
   phoneNumber?: string | null;
 };
 
@@ -63,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               createdAt: serverTimestamp(),
             };
             await setDoc(userDocRef, newUserPayload, { merge: true });
-            fullUser = { ...newUserPayload, firestore };
+            fullUser = newUserPayload;
           } else {
             fullUser = { 
               uid: firebaseUser.uid,
@@ -72,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               photoURL: firebaseUser.photoURL,
               phoneNumber: firebaseUser.phoneNumber,
               ...userDoc.data(),
-              firestore 
             };
           }
           

@@ -66,7 +66,7 @@ export default function AppLayout({
   }
 
   return (
-      <LocationProvider user={{...user, firestore: firestore}}>
+      <LocationProvider user={user} firestore={firestore}>
         <TooltipProvider>
           <div className="relative min-h-screen w-full md:grid md:grid-cols-[auto_1fr]">
             <aside className={`relative z-40 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'}`}>
