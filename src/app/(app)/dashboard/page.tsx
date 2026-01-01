@@ -317,6 +317,10 @@ function MyFieldsAndTasks() {
         if (!user || !location) return;
         setGeneratingFieldId(field.id);
         try {
+            const plantingDate = field.createdAt 
+                ? new Date(field.createdAt.seconds * 1000)
+                : new Date(); // Fallback to now if createdAt is not available yet
+
             const result = await generateTaskTimeline({
                 crop: field.crop,
                 location: {
@@ -325,7 +329,7 @@ function MyFieldsAndTasks() {
                     latitude: location.lat,
                     longitude: location.lon,
                 },
-                plantingDate: format(new Date(field.createdAt.seconds * 1000), 'yyyy-MM-dd')
+                plantingDate: format(plantingDate, 'yyyy-MM-dd')
             });
 
             const tasksCollection = collection(firestore, `users/${user.uid}/tasks`);
@@ -638,3 +642,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
