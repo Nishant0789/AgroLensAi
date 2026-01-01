@@ -446,33 +446,35 @@ function MyFieldsAndTasks() {
                             return (
                                 <AccordionItem value={field.id} key={field.id} className="border-none">
                                     <CardSpotlight className="p-0">
-                                        <AccordionTrigger className="p-4 w-full cursor-pointer hover:no-underline [&[data-state=open]>svg]:text-primary">
-                                            <div className="flex items-center justify-between w-full">
-                                                <div className="flex items-center gap-4">
-                                                    <Tractor className="h-6 w-6 text-primary" />
-                                                    <div>
-                                                        <h3 className="font-semibold text-left">{field.name}</h3>
-                                                        <Badge variant="secondary">{field.crop}</Badge>
+                                        <div className="flex items-center w-full p-4">
+                                            <AccordionTrigger className="flex-1 p-0 pr-4 w-full cursor-pointer hover:no-underline [&[data-state=open]>svg]:text-primary">
+                                                <div className="flex items-center justify-between w-full">
+                                                    <div className="flex items-center gap-4">
+                                                        <Tractor className="h-6 w-6 text-primary" />
+                                                        <div>
+                                                            <h3 className="font-semibold text-left">{field.name}</h3>
+                                                            <Badge variant="secondary">{field.crop}</Badge>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right hidden sm:block">
+                                                        <p className="text-xs text-muted-foreground">Next Action</p>
+                                                        {nextAction ? (
+                                                            <p className="font-semibold">{nextAction.title} by {format(parseISO(nextAction.date), 'MMM d')}</p>
+                                                        ) : (
+                                                            <p className="font-semibold text-muted-foreground">All caught up!</p>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div className="text-right hidden sm:block">
-                                                    <p className="text-xs text-muted-foreground">Next Action</p>
-                                                    {nextAction ? (
-                                                        <p className="font-semibold">{nextAction.title} by {format(parseISO(nextAction.date), 'MMM d')}</p>
-                                                    ) : (
-                                                        <p className="font-semibold text-muted-foreground">All caught up!</p>
-                                                    )}
-                                                </div>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="h-8 w-8 z-10 hover:bg-destructive/10 hover:text-destructive"
-                                                    onClick={(e) => { e.stopPropagation(); setFieldToDelete(field); }}
-                                                >
-                                                    <Trash2 className="h-4 w-4"/>
-                                                </Button>
-                                            </div>
-                                        </AccordionTrigger>
+                                            </AccordionTrigger>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 z-10 shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                                                onClick={(e) => { e.stopPropagation(); setFieldToDelete(field); }}
+                                            >
+                                                <Trash2 className="h-4 w-4"/>
+                                            </Button>
+                                        </div>
                                         <AccordionContent className="px-4 pb-4">
                                             {fieldTasks.length > 0 ? (
                                                 <div className="space-y-2">
@@ -706,5 +708,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
