@@ -97,6 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signInWithPopup(auth, provider);
       router.push('/dashboard');
     } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        // User closed the popup, this is not an error to be logged.
+        setLoading(false);
+        return;
+      }
       console.error("Error signing in with Google: ", error);
       // This provides more detailed error info in the console on the deployed site
       if (error.code === 'auth/unauthorized-domain') {
