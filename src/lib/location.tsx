@@ -86,7 +86,7 @@ export function LocationProvider({ children, user, firestore }: { children: Reac
     }
   }, [user, firestore]);
 
-  const fetchLocation = useCallback(async () => {
+  const fetchLocation = async () => {
     setLoading(true);
     setError(null);
 
@@ -154,13 +154,14 @@ export function LocationProvider({ children, user, firestore }: { children: Reac
         handleError(errorMessage);
         setLocationData(GORAKHPUR_LOCATION);
     }
-  }, [user, firestore]);
+  };
 
   useEffect(() => {
     if (user) {
         fetchLocation();
     }
-  }, [fetchLocation, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const value = { location, loading, error, fetchLocation, setLocation: setManualLocation };
 
