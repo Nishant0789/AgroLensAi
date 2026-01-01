@@ -8,8 +8,6 @@ import { Sun, Cloud, CloudRain, Snowflake, Wind, CloudSun, MapPin, Loader2, Aler
 import { Button } from '@/components/ui/button';
 import { useLocation } from '@/lib/location';
 import { useEffect, useState, useMemo } from 'react';
-import { getWeatherForecast } from '@/ai/flows/get-weather-forecast';
-import { type WeatherDataPoint } from '@/ai/flows/weather-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
@@ -24,6 +22,7 @@ import { format, parseISO, isFuture } from 'date-fns';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { type AnalyzeCropOutput } from '@/ai/ai-crop-scanner';
 import { useToast } from '@/hooks/use-toast';
+import { useAIData } from '@/lib/ai-data-provider';
 
 const weatherIconMap: { [key: string]: React.ElementType } = {
     sun: Sun,
@@ -40,34 +39,11 @@ const weatherIconMap: { [key: string]: React.ElementType } = {
 
 function WeatherCard() {
   const { location, loading: locationLoading, error: locationError, fetchLocation, setLocation } = useLocation();
-  const [weather, setWeather] = useState<WeatherDataPoint[] | null>(null);
-  const [weatherLoading, setWeatherLoading] = useState(false);
-  const [weatherError, setWeatherError] = useState<string | null>(null);
+  const { weather, loading: weatherLoading, error: weatherError, fetchWeather } = useAIData();
+
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [newLocation, setNewLocation] = useState('');
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
-
-  const fetchWeather = async () => {
-    if (!location) return;
-
-    setWeatherLoading(true);
-    setWeatherError(null);
-    try {
-      const forecast = await getWeatherForecast({ latitude: location.lat, longitude: location.lon });
-      setWeather(forecast.forecast);
-    } catch (error) {
-      console.error(error);
-      setWeatherError('Could not fetch weather data. Please try again.');
-    } finally {
-      setWeatherLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (location) {
-      fetchWeather();
-    }
-  }, [location]);
   
   const handleUpdateLocation = async () => {
     if (!newLocation) return;

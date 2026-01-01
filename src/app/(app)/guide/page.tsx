@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { generatePersonalizedGuide, type PersonalizedGuideOutput } from '@/ai/flows/newbie-to-pro-growth-roadmap';
 import { Check, Loader, Wheat, RefreshCw, DollarSign, Sparkles, Clock, AlertTriangle, Languages } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useLocation } from '@/lib/location';
@@ -12,10 +11,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { translateContent } from '@/ai/flows/translate-content';
 import { type TranslateContentInput } from '@/ai/flows/translate-content-types';
 import { CardSpotlight } from '@/components/ui/card-spotlight';
+import { useAIData, type CropSuggestion, type GrowthRoadmap } from '@/lib/ai-data-provider';
 
-
-type CropSuggestion = PersonalizedGuideOutput['suggestions'][0];
-type GrowthRoadmap = PersonalizedGuideOutput['roadmap'];
 
 const steps = [
   { id: 1, name: 'Crop Selection' },
@@ -36,99 +33,57 @@ const LanguageSwitcher = ({ language, onLanguageChange, disabled }: { language: 
 
 export default function GuidePage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
   const { location, loading: locationLoading, error: locationError, fetchLocation } = useLocation();
   
-  const [guideData, setGuideData] = useState<PersonalizedGuideOutput | null>(null);
-  const [originalGuideData, setOriginalGuideData] = useState<PersonalizedGuideOutput | null>(null);
+  const { 
+    guideData: originalGuideData, 
+    loading: guideLoading, 
+    error: guideError, 
+    fetchGuide,
+    cooldown
+  } = useAIData();
+
+  const [displayGuideData, setDisplayGuideData] = useState(originalGuideData);
+  const [translationLoading, setTranslationLoading] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
+
   const [selectedCrop, setSelectedCrop] = useState<CropSuggestion | null>(null);
   const [selectedRoadmap, setSelectedRoadmap] = useState<GrowthRoadmap | null>(null);
   const [language, setLanguage] = useState('English');
 
-  const [cooldown, setCooldown] = useState(0);
+  const loading = guideLoading || translationLoading;
+  const error = guideError || translationError;
 
+  // Effect to set initial data and selection when original data loads
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (cooldown > 0) {
-      timer = setInterval(() => {
-        setCooldown(prev => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [cooldown]);
-
-  const fetchGuide = async () => {
-    if (!location?.name || cooldown > 0) return;
-
-    setLoading(true);
-    setError(null);
-    setGuideData(null);
-    setOriginalGuideData(null);
-    setSelectedCrop(null);
-    setSelectedRoadmap(null);
-    setCurrentStep(1);
-    setCooldown(10); // 10 second cooldown
-    
-    try {
-      const result = await generatePersonalizedGuide({ location: location.name, language: 'English' });
-      setOriginalGuideData(result);
-
-      if (language === 'English') {
-        setGuideData(result);
-        if (result.suggestions.length > 0) {
-          const roadmapCropName = result.roadmap.title.split(" for ")[1]?.split(" in ")[0];
-          const topCrop = result.suggestions.find((s: any) => s.name === roadmapCropName) || result.suggestions[0];
-          
+    if (originalGuideData) {
+      setDisplayGuideData(originalGuideData);
+      setLanguage('English'); // Reset to english when new original data comes
+      if (originalGuideData.suggestions.length > 0) {
+          const roadmapCropName = originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0];
+          const topCrop = originalGuideData.suggestions.find(s => s.name === roadmapCropName) || originalGuideData.suggestions[0];
           setSelectedCrop(topCrop);
-          setSelectedRoadmap(result.roadmap);
-        }
-      } else {
-        const translatedResult = await translateContent({
-            content: result,
-            targetLanguage: language,
-        } as TranslateContentInput);
-        setGuideData(translatedResult);
-        if (translatedResult.suggestions.length > 0) {
-            const originalRoadmapCropName = result.roadmap.title.split(" for ")[1]?.split(" in ")[0];
-            const topCropIndex = result.suggestions.findIndex(s => s.name === originalRoadmapCropName);
-            const topCrop = translatedResult.suggestions[topCropIndex > -1 ? topCropIndex : 0];
-            
-            setSelectedCrop(topCrop);
-            setSelectedRoadmap(translatedResult.roadmap);
-        }
+          setSelectedRoadmap(originalGuideData.roadmap);
       }
-    } catch (err: any) {
-      console.error(err);
-      const errorMessage = err.message || "An unknown error occurred.";
-      if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource has been exhausted')) {
-          setError("The AI is currently busy or your free credits may have been used up. Please try again later.");
-      } else {
-          setError('Could not fetch your personalized guide. The AI assistant might be busy. Please try again in a moment.');
-      }
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [originalGuideData]);
 
   const handleLanguageChange = async (lang: string) => {
     setLanguage(lang);
-    if (!originalGuideData) {
-        if(location) fetchGuide();
-        return;
-    };
+    if (!originalGuideData) return;
     
-    setLoading(true);
+    setTranslationLoading(true);
+    setTranslationError(null);
+
     if (lang === 'English') {
-        setGuideData(originalGuideData);
+        setDisplayGuideData(originalGuideData);
         if (originalGuideData.suggestions.length > 0) {
             const roadmapCropName = originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0];
             const topCrop = originalGuideData.suggestions.find(s => s.name === roadmapCropName) || originalGuideData.suggestions[0];
             setSelectedCrop(topCrop);
             setSelectedRoadmap(originalGuideData.roadmap);
         }
-        setLoading(false);
+        setTranslationLoading(false);
         return;
     }
 
@@ -137,15 +92,12 @@ export default function GuidePage() {
             content: originalGuideData,
             targetLanguage: lang
         } as TranslateContentInput);
-        setGuideData(translatedResult);
+        setDisplayGuideData(translatedResult);
 
         if (translatedResult.suggestions.length > 0) {
-          // Find the original index of the top crop to select the correct translated crop
           const originalRoadmapCropName = originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0];
           const topCropIndex = originalGuideData.suggestions.findIndex(s => s.name === originalRoadmapCropName);
-          
           const topCrop = translatedResult.suggestions[topCropIndex > -1 ? topCropIndex : 0];
-
           setSelectedCrop(topCrop);
           setSelectedRoadmap(translatedResult.roadmap);
         }
@@ -154,39 +106,30 @@ export default function GuidePage() {
         console.error('Translation failed', err);
         const errorMessage = err.message || "An unknown error occurred.";
         if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('resource has been exhausted')) {
-            setError("The AI is currently busy or your free credits may have been used up. Please try again later.");
+            setTranslationError("The AI is currently busy or your free credits may have been used up. Please try again later.");
         } else {
-            setError('Failed to translate the guide. Please try again.');
+            setTranslationError('Failed to translate the guide. Please try again.');
         }
     } finally {
-        setLoading(false);
+        setTranslationLoading(false);
     }
   }
   
-  useEffect(() => {
-    if (location && !guideData && !loading && !error) {
-      fetchGuide();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location]);
-
   const handleSelectCrop = (crop: CropSuggestion) => {
-    if (!guideData || !originalGuideData) return;
+    if (!displayGuideData || !originalGuideData) return;
     
     setSelectedCrop(crop);
     setCurrentStep(2);
     
-    // find the original english crop name to find the correct roadmap
-    const originalIndex = guideData.suggestions.findIndex(s => s.name === crop.name);
-    const originalCrop = originalGuideData.suggestions[originalIndex];
+    const originalIndex = displayGuideData.suggestions.findIndex(s => s.name === crop.name);
+    const originalCropName = originalGuideData.suggestions[originalIndex]?.name;
+    const originalRoadmapCropName = originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0];
 
-    if (originalCrop.name === originalGuideData.roadmap.title.split(" for ")[1]?.split(" in ")[0]) {
-      setSelectedRoadmap(guideData.roadmap);
+    if (originalCropName === originalRoadmapCropName) {
+      setSelectedRoadmap(displayGuideData.roadmap);
     } else {
-        // In this version, we don't regenerate roadmaps on the fly to save API calls.
-        // We just show the pre-generated one for the top crop.
         alert("Detailed roadmap is shown for the top recommended crop. Other roadmaps can be generated in a future version.");
-        setSelectedRoadmap(guideData.roadmap);
+        setSelectedRoadmap(displayGuideData.roadmap);
     }
   }
 
@@ -194,10 +137,6 @@ export default function GuidePage() {
     setCurrentStep(1);
   }
   
-  const handleRegenerate = () => {
-    fetchGuide();
-  }
-
   const handleRetry = () => {
       if (!location) {
           fetchLocation();
@@ -213,7 +152,6 @@ export default function GuidePage() {
       Low: { variant: 'destructive', className: 'bg-red-500' },
     } as const;
     
-    // Normalize level for safety
     const safeLevel = ['High', 'Medium', 'Low'].includes(level) ? level : 'Medium';
 
     return (
@@ -288,15 +226,16 @@ export default function GuidePage() {
               </CardHeader>
               <CardContent className="p-6">
                 <LanguageSwitcher language={language} onLanguageChange={handleLanguageChange} disabled={loading || locationLoading} />
-                {(locationLoading || (loading && !guideData)) && <LoadingIndicator />}
+                {(locationLoading || (guideLoading && !displayGuideData)) && <LoadingIndicator />}
+                {translationLoading && <LoadingIndicator text="Translating..."/>}
                 
                 {!locationLoading && locationError && <ErrorDisplay error={locationError} onRetry={fetchLocation} />}
 
                 {location && !loading && error && <ErrorDisplay error={error} onRetry={handleRetry} />}
                 
-                {guideData && guideData.suggestions.length > 0 && (
+                {displayGuideData && displayGuideData.suggestions.length > 0 && !loading && !error && (
                   <div className="grid md:grid-cols-2 gap-4">
-                    {guideData.suggestions.map((crop) => (
+                    {displayGuideData.suggestions.map((crop) => (
                       <motion.div
                           key={crop.name}
                           initial={{ opacity: 0, y: 20 }}
@@ -373,7 +312,7 @@ export default function GuidePage() {
                         <Button onClick={handleStartOver} variant="outline" className="w-full">
                             <Wheat className="mr-2" /> Back to Crop Selection
                         </Button>
-                        <Button onClick={handleRegenerate} variant="secondary" className="w-full" disabled={cooldown > 0 || loading}>
+                        <Button onClick={handleRetry} variant="secondary" className="w-full" disabled={cooldown > 0 || loading}>
                             {cooldown > 0 ? `Try again in ${cooldown}s` : <><RefreshCw className="mr-2" /> Regenerate Suggestions</>}
                         </Button>
                     </div>
