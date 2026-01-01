@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth.tsx';
-import { Waves } from '@/components/waves';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
@@ -36,7 +35,6 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <AuthProvider>
-            <Waves strokeColor="hsl(0 0% 50% / 0.5)" />
             {children}
           </AuthProvider>
         </FirebaseClientProvider>
