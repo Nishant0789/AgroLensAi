@@ -6,7 +6,7 @@
  * - translateContent - A function that handles the translation.
  */
 
-import { interactiveAi } from '@/ai/genkit';
+// import { interactiveAi } from '@/ai/genkit';
 import {
   TranslateContentInputSchema,
   TranslateContentOutputSchema,
@@ -58,49 +58,51 @@ function replaceStrings(obj: any, translations: string[]): any {
 
 
 export async function translateContent(input: TranslateContentInput): Promise<TranslateContentOutput> {
-  return translateContentFlow(input);
+  // return translateContentFlow(input);
+  console.log('translateContent called, but AI is disabled.');
+  return input.content;
 }
 
 
-const translateContentFlow = interactiveAi.defineFlow(
-  {
-    name: 'translateContentFlow',
-    inputSchema: TranslateContentInputSchema,
-    outputSchema: TranslateContentOutputSchema,
-  },
-  async ({ content, targetLanguage }) => {
-    // 1. Find all strings to translate
-    const stringsToTranslate = findStrings(JSON.parse(JSON.stringify(content))); // Deep copy to avoid mutation issues
+// const translateContentFlow = interactiveAi.defineFlow(
+//   {
+//     name: 'translateContentFlow',
+//     inputSchema: TranslateContentInputSchema,
+//     outputSchema: TranslateContentOutputSchema,
+//   },
+//   async ({ content, targetLanguage }) => {
+//     // 1. Find all strings to translate
+//     const stringsToTranslate = findStrings(JSON.parse(JSON.stringify(content))); // Deep copy to avoid mutation issues
     
-    if (stringsToTranslate.length === 0) {
-      return content;
-    }
+//     if (stringsToTranslate.length === 0) {
+//       return content;
+//     }
 
-    // 2. Call the LLM to translate them in a batch
-    const translationResult = await interactiveAi.generate({
-      prompt: `Translate the following array of strings into ${targetLanguage}. Maintain the array structure and the order of the strings.
+//     // 2. Call the LLM to translate them in a batch
+//     const translationResult = await interactiveAi.generate({
+//       prompt: `Translate the following array of strings into ${targetLanguage}. Maintain the array structure and the order of the strings.
 
-      Strings to translate:
-      ${JSON.stringify(stringsToTranslate, null, 2)}
-      `,
-      model: 'googleai/gemini-2.5-flash-lite',
-      output: {
-        schema: TranslationResponseSchema,
-      },
-      config: {
-        temperature: 0.2, // Lower temperature for more deterministic translation
-      },
-    });
+//       Strings to translate:
+//       ${JSON.stringify(stringsToTranslate, null, 2)}
+//       `,
+//       model: 'googleai/gemini-2.5-flash-lite',
+//       output: {
+//         schema: TranslationResponseSchema,
+//       },
+//       config: {
+//         temperature: 0.2, // Lower temperature for more deterministic translation
+//       },
+//     });
 
-    const translatedStrings = translationResult.output?.translations;
+//     const translatedStrings = translationResult.output?.translations;
 
-    if (!translatedStrings || translatedStrings.length !== stringsToTranslate.length) {
-      throw new Error('Translation failed: The number of translated strings does not match the original.');
-    }
+//     if (!translatedStrings || translatedStrings.length !== stringsToTranslate.length) {
+//       throw new Error('Translation failed: The number of translated strings does not match the original.');
+//     }
 
-    // 3. Reconstruct the object with the translated strings
-    const translatedContent = replaceStrings(JSON.parse(JSON.stringify(content)), translatedStrings);
+//     // 3. Reconstruct the object with the translated strings
+//     const translatedContent = replaceStrings(JSON.parse(JSON.stringify(content)), translatedStrings);
 
-    return translatedContent;
-  }
-);
+//     return translatedContent;
+//   }
+// );

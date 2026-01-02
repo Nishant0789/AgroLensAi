@@ -7,7 +7,7 @@
  * - GeneratePreventiveMeasuresOutput - Output for the function.
  */
 
-import {ai} from '@/ai/genkit';
+// import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
 const GeneratePreventiveMeasuresInputSchema = z.object({
@@ -24,30 +24,32 @@ export type GeneratePreventiveMeasuresOutput = z.infer<typeof GeneratePreventive
 
 
 export async function generatePreventiveMeasures(input: GeneratePreventiveMeasuresInput): Promise<GeneratePreventiveMeasuresOutput> {
-  return generatePreventiveMeasuresFlow(input);
+  // return generatePreventiveMeasuresFlow(input);
+  console.log('generatePreventiveMeasures called, but AI is disabled');
+  return { measures: '- This is a mock response as AI is disabled.\n- Keep your fields clean.' };
 }
 
-const prompt = ai.definePrompt({
-    name: 'generatePreventiveMeasuresPrompt',
-    input: { schema: GeneratePreventiveMeasuresInputSchema },
-    output: { schema: GeneratePreventiveMeasuresOutputSchema },
-    prompt: `You are an expert agricultural advisor. A nearby farm has reported a case of "{{disease}}".
-    A farmer in the same area ({{location}}) is growing "{{crop}}" and needs personalized advice on how to protect their crop.
+// const prompt = ai.definePrompt({
+//     name: 'generatePreventiveMeasuresPrompt',
+//     input: { schema: GeneratePreventiveMeasuresInputSchema },
+//     output: { schema: GeneratePreventiveMeasuresOutputSchema },
+//     prompt: `You are an expert agricultural advisor. A nearby farm has reported a case of "{{disease}}".
+//     A farmer in the same area ({{location}}) is growing "{{crop}}" and needs personalized advice on how to protect their crop.
     
-    Provide a concise, actionable list of preventive measures they should take immediately.
-    Focus on practical steps suitable for a small to medium-sized farm.
-    `,
-    model: 'googleai/gemini-2.5-flash-lite',
-});
+//     Provide a concise, actionable list of preventive measures they should take immediately.
+//     Focus on practical steps suitable for a small to medium-sized farm.
+//     `,
+//     model: 'googleai/gemini-2.5-flash-lite',
+// });
 
-const generatePreventiveMeasuresFlow = ai.defineFlow(
-  {
-    name: 'generatePreventiveMeasuresFlow',
-    inputSchema: GeneratePreventiveMeasuresInputSchema,
-    outputSchema: GeneratePreventiveMeasuresOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
-    return output!;
-  }
-);
+// const generatePreventiveMeasuresFlow = ai.defineFlow(
+//   {
+//     name: 'generatePreventiveMeasuresFlow',
+//     inputSchema: GeneratePreventiveMeasuresInputSchema,
+//     outputSchema: GeneratePreventiveMeasuresOutputSchema,
+//   },
+//   async (input) => {
+//     const { output } = await prompt(input);
+//     return output!;
+//   }
+// );

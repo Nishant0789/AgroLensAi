@@ -9,7 +9,7 @@
  * - PersonalizedGuideOutput - The return type for the function.
  */
 
-import {ai as generativeAi} from '@/ai/genkit';
+// import {ai as generativeAi} from '@/ai/genkit';
 import {z} from 'zod';
 
 // Input Schema for the main flow
@@ -55,43 +55,56 @@ export type PersonalizedGuideOutput = z.infer<typeof PersonalizedGuideOutputSche
  * Generates crop suggestions and a growth roadmap for the best suggestion.
  */
 export async function generatePersonalizedGuide(input: PersonalizedGuideInput): Promise<PersonalizedGuideOutput> {
-  return personalizedGuideFlow(input);
+  // return personalizedGuideFlow(input);
+  console.log('generatePersonalizedGuide called, but AI is disabled.');
+  return {
+    suggestions: [
+      { name: 'Mock Crop 1', reason: 'AI is disabled.', profitability: 'Medium' },
+      { name: 'Mock Crop 2', reason: 'AI is disabled.', profitability: 'High' },
+    ],
+    roadmap: {
+      title: 'Mock Roadmap for Mock Crop 2',
+      roadmap: [
+        { title: 'Step 1', description: 'This is a mock step.', duration: '1 week' }
+      ]
+    }
+  }
 }
 
-const personalizedGuidePrompt = generativeAi.definePrompt({
-    name: 'personalizedGuidePrompt',
-    input: { schema: PersonalizedGuideInputSchema },
-    output: { schema: PersonalizedGuideOutputSchema },
-    prompt: `You are an expert agricultural advisor. A new farmer in {{location}} needs guidance. Your response must be in {{language}}.
+// const personalizedGuidePrompt = generativeAi.definePrompt({
+//     name: 'personalizedGuidePrompt',
+//     input: { schema: PersonalizedGuideInputSchema },
+//     output: { schema: PersonalizedGuideOutputSchema },
+//     prompt: `You are an expert agricultural advisor. A new farmer in {{location}} needs guidance. Your response must be in {{language}}.
 
-    Your task is two-fold:
-    1.  Suggest 3-4 profitable and feasible crops for a new farmer in this location. For each crop, provide its name, a brief reason for its suitability (climate, demand), and a predicted profitability rating (High, Medium, or Low).
-    2.  From the crops you just suggested, select the BEST one for a new farmer (prioritizing ease of growth and profitability). Generate a detailed, step-by-step growth roadmap for that single crop.
+//     Your task is two-fold:
+//     1.  Suggest 3-4 profitable and feasible crops for a new farmer in this location. For each crop, provide its name, a brief reason for its suitability (climate, demand), and a predicted profitability rating (High, Medium, or Low).
+//     2.  From the crops you just suggested, select the BEST one for a new farmer (prioritizing ease of growth and profitability). Generate a detailed, step-by-step growth roadmap for that single crop.
     
-    Each step in the roadmap should have a clear title, a duration estimate, and a detailed description of the necessary actions. Key stages to include are:
-    - Soil Preparation
-    - Planting/Sowing
-    - Germination & Early Growth
-    - Vegetative Growth & Maintenance (including irrigation, fertilization)
-    - Pest & Disease Management
-    - Flowering & Fruiting/Graining
-    - Harvesting
-    - Post-Harvest Handling
+//     Each step in the roadmap should have a clear title, a duration estimate, and a detailed description of the necessary actions. Key stages to include are:
+//     - Soil Preparation
+//     - Planting/Sowing
+//     - Germination & Early Growth
+//     - Vegetative Growth & Maintenance (including irrigation, fertilization)
+//     - Pest & Disease Management
+//     - Flowering & Fruiting/Graining
+//     - Harvesting
+//     - Post-Harvest Handling
 
-    Provide the final output in the specified JSON format, with all text in {{language}}, containing both the list of suggestions and the detailed roadmap for the top choice.
-    `,
-    model: 'googleai/gemini-2.5-flash-lite',
-});
+//     Provide the final output in the specified JSON format, with all text in {{language}}, containing both the list of suggestions and the detailed roadmap for the top choice.
+//     `,
+//     model: 'googleai/gemini-2.5-flash-lite',
+// });
 
 
-const personalizedGuideFlow = generativeAi.defineFlow(
-  {
-    name: 'personalizedGuideFlow',
-    inputSchema: PersonalizedGuideInputSchema,
-    outputSchema: PersonalizedGuideOutputSchema,
-  },
-  async (input) => {
-    const { output } = await personalizedGuidePrompt(input);
-    return output!;
-  }
-);
+// const personalizedGuideFlow = generativeAi.defineFlow(
+//   {
+//     name: 'personalizedGuideFlow',
+//     inputSchema: PersonalizedGuideInputSchema,
+//     outputSchema: PersonalizedGuideOutputSchema,
+//   },
+//   async (input) => {
+//     const { output } = await personalizedGuidePrompt(input);
+//     return output!;
+//   }
+// );

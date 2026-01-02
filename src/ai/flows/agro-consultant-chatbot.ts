@@ -8,7 +8,7 @@
  * - AgroConsultantChatbotOutput - The return type for the agroConsultantChatbot function.
  */
 
-import {interactiveAi} from '@/ai/genkit';
+// import {interactiveAi} from '@/ai/genkit';
 import {z} from 'zod';
 import Handlebars from 'handlebars';
 
@@ -36,44 +36,46 @@ const AgroConsultantChatbotOutputSchema = z.object({
 export type AgroConsultantChatbotOutput = z.infer<typeof AgroConsultantChatbotOutputSchema>;
 
 export async function agroConsultantChatbot(input: AgroConsultantChatbotInput): Promise<AgroConsultantChatbotOutput> {
-  return agroConsultantChatbotFlow(input);
+  // return agroConsultantChatbotFlow(input);
+  console.log('agroConsultantChatbot called, but AI is disabled');
+  return { response: 'This is a mock response. AI functionality is temporarily disabled.' };
 }
 
-const prompt = interactiveAi.definePrompt({
-  name: 'agroConsultantChatbotPrompt',
-  input: {schema: AgroConsultantChatbotInputSchema},
-  output: {schema: AgroConsultantChatbotOutputSchema},
-  prompt: `You are a helpful AI assistant that specializes in answering farming questions. Use the chat history to maintain context.
+// const prompt = interactiveAi.definePrompt({
+//   name: 'agroConsultantChatbotPrompt',
+//   input: {schema: AgroConsultantChatbotInputSchema},
+//   output: {schema: AgroConsultantChatbotOutputSchema},
+//   prompt: `You are a helpful AI assistant that specializes in answering farming questions. Use the chat history to maintain context.
 
-Chat History:
-{{#each chatHistory}}
-  {{#ifEquals role "user"}}User: {{content}}{{else}}Assistant: {{content}}{{/ifEquals}}
-{{/each}}
+// Chat History:
+// {{#each chatHistory}}
+//   {{#ifEquals role "user"}}User: {{content}}{{else}}Assistant: {{content}}{{/ifEquals}}
+// {{/each}}
 
-User Query: {{{query}}}
+// User Query: {{{query}}}
 
-Response: `,
-  model: 'googleai/gemini-2.5-flash-lite',
-  config: {
-    safetySettings: [
-      {
-        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-        threshold: 'BLOCK_NONE',
-      },
-    ],
-  },
-});
+// Response: `,
+//   model: 'googleai/gemini-2.5-flash-lite',
+//   config: {
+//     safetySettings: [
+//       {
+//         category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+//         threshold: 'BLOCK_NONE',
+//       },
+//     ],
+//   },
+// });
 
-const agroConsultantChatbotFlow = interactiveAi.defineFlow(
-  {
-    name: 'agroConsultantChatbotFlow',
-    inputSchema: AgroConsultantChatbotInputSchema,
-    outputSchema: AgroConsultantChatbotOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return {
-      response: output!.response,
-    };
-  }
-);
+// const agroConsultantChatbotFlow = interactiveAi.defineFlow(
+//   {
+//     name: 'agroConsultantChatbotFlow',
+//     inputSchema: AgroConsultantChatbotInputSchema,
+//     outputSchema: AgroConsultantChatbotOutputSchema,
+//   },
+//   async input => {
+//     const {output} = await prompt(input);
+//     return {
+//       response: output!.response,
+//     };
+//   }
+// );
