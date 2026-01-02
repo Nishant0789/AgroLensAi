@@ -9,8 +9,8 @@
  * - PersonalizedGuideOutput - The return type for the function.
  */
 
-import {generativeAi} from '@/ai/genkit';
-import {z} from 'genkit';
+import {ai as generativeAi} from '@/ai/genkit';
+import {z} from 'zod';
 
 // Input Schema for the main flow
 const PersonalizedGuideInputSchema = z.object({

@@ -8,7 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const GeneratePreventiveMeasuresInputSchema = z.object({
   disease: z.string().describe('The disease to prevent.'),

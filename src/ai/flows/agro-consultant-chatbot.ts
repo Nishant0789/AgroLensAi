@@ -9,7 +9,7 @@
  */
 
 import {interactiveAi} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 import Handlebars from 'handlebars';
 
 // Handlebars helper function to check equality

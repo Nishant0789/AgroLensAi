@@ -1,4 +1,4 @@
-import { z } from 'genkit';
+import { z } from 'zod';
 
 export const TranslateContentInputSchema = z.object({
   content: z.any().describe('The JSON object with text fields to be translated.'),
